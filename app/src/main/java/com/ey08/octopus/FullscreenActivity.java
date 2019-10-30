@@ -35,6 +35,7 @@ import com.ey08.octopus.API.MediaData;
 import com.ey08.octopus.API.Playlist;
 import com.ey08.octopus.API.QueryListener;
 import com.ey08.octopus.API.QueryScheduler;
+import com.ey08.octopus.API.Reporter;
 import com.github.rongi.rotate_layout.layout.RotateLayout;
 
 import org.json.JSONObject;
@@ -75,6 +76,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private ArrayList<CommandData> commands;
     private Playlist playlist;
     private Downloader downloader;
+    private Reporter reporter;
     private boolean isDownloading = false;
 
     private String screenID;
@@ -172,6 +174,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         }
 
         downloader = new Downloader(getApplicationContext(), this);
+        reporter = new Reporter();
         checkPermission(getApplicationContext(), this);
 
     }
@@ -417,7 +420,9 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
                         case KEY_COMMANDS_RESET:
                             clearApplicationData();
+                            reporter.reportCommandStatus(command,"succeeded");
                             finishAffinity();
+
                             break;
 
                         default:
