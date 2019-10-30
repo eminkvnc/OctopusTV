@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">OctopusTV Player</string>
+    <string name="gif_dialog_content_loading">Content Loading...</string>
+    <string name="downloader_notification_media_downloading">Media downloading...</string>
+    <string name="fullscreen_activity_storage_permission_toast">You Must Grant Storage Permission!</string>
+    <string name="fullscreen_activity_register_screen_id">Please register your screen ID in the panel.</string>
+    <string name="fullscreen_activity_network_connected">Network Connected</string>
+    <string name="fullscreen_activity_network_disconnected">Network Disconnected</string>
+    <string name="fullscreen_activity_tap_twice">Tap Twice to Exit</string>
+
+</resources>

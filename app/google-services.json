@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "128844372129",
+    "firebase_url": "https://whatsapp-stickers-9fb59.firebaseio.com",
+    "project_id": "whatsapp-stickers-9fb59",
+    "storage_bucket": "whatsapp-stickers-9fb59.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128844372129:android:97ca11442207144995f8e0",
+        "android_client_info": {
+          "package_name": "com.ey08.akinaltan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "128844372129-b3k66m3839p5e4jausvn15kl0ugbrk6p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPazudL-LSF9bCRvrSjt4zhm36mGTyoWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "128844372129-b3k66m3839p5e4jausvn15kl0ugbrk6p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128844372129:android:c683d60773b84963",
+        "android_client_info": {
+          "package_name": "com.ey08.islamicstickers"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "128844372129-b3k66m3839p5e4jausvn15kl0ugbrk6p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPazudL-LSF9bCRvrSjt4zhm36mGTyoWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "128844372129-b3k66m3839p5e4jausvn15kl0ugbrk6p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128844372129:android:6b1aadf0594e4e0195f8e0",
+        "android_client_info": {
+          "package_name": "com.ey08.octopus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "128844372129-b3k66m3839p5e4jausvn15kl0ugbrk6p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPazudL-LSF9bCRvrSjt4zhm36mGTyoWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "128844372129-b3k66m3839p5e4jausvn15kl0ugbrk6p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
