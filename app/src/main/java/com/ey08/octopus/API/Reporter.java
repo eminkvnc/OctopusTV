@@ -15,6 +15,7 @@ public class Reporter {
 
 
     public Reporter() {
+
     }
 
     public static String TAG = "Reporter";
@@ -24,7 +25,6 @@ public class Reporter {
     public void reportCommandStatus(CommandData commandData, String status){
 
         try {
-
 
             String urlString = queryUrl+"api/command/"+commandData.getId();
             urlString += "?"+"status"+"="+status;

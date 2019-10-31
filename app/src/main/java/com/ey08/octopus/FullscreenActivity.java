@@ -360,6 +360,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         //PARSE COMMANDS HERE
         JSonParser parser = new JSonParser(result);
         commands = parser.parseCommands();
+
         //process commands
         if(commands != null){
             if(commands.isEmpty()){
@@ -419,10 +420,23 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             break;
 
                         case KEY_COMMANDS_RESET:
-                            clearApplicationData();
+                            /*clearApplicationData();
                             reporter.reportCommandStatus(command,"succeeded");
-                            finishAffinity();
+                            finishAffinity();*/
 
+                            break;
+
+                        case KEY_COMMANDS_TURN_ON_TV:
+                            String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
+                            ShellExecuter shellExecuterOn = new ShellExecuter(turnOnShellCommand);
+                            shellExecuterOn.start();
+
+                            break;
+
+                        case KEY_COMMANDS_TURN_OFF_TV:
+                            String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
+                            ShellExecuter shellExecuterOff = new ShellExecuter(turnOffShellCommand);
+                            shellExecuterOff.start();
                             break;
 
                         default:
@@ -449,14 +463,12 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    String firstMessage = getResources().
-                            getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + screenID;
+                    String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + screenID;
                     textView.setVisibility(View.VISIBLE);
                     textView.setText(firstMessage);
                 }
             });
         }
-
     }
 
 

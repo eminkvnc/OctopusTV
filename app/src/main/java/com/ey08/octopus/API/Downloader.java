@@ -61,7 +61,6 @@ public class Downloader {
 
         downloadManager = (DownloadManager)context.getSystemService(DOWNLOAD_SERVICE);
     }
-
     public void startDownload(String fileName) {
         context.registerReceiver(onCompleteBroadcastReceiver,
                 new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
@@ -83,7 +82,5 @@ public class Downloader {
             downloadCompleteListener.downloadStart();
         }
     }
-
-
 }
 
