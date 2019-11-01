@@ -1,60 +1,87 @@
 package com.ey08.octopus.API;
 
+import android.app.Service;
+import android.content.Intent;
+import android.os.IBinder;
 import android.util.Log;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import androidx.annotation.Nullable;
+
+import com.ey08.octopus.FullscreenActivity;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import javax.net.ssl.HttpsURLConnection;
 
-public class QueryScheduler {
+public class QueryScheduler extends Service {
 
     private static final String TAG = "QueryScheduler";
 
     private final int SCHEDULE_PERIOD = 1000*30;
     private final int SCHEDULE_DELAY = 300;
 
+    public static final String ACTION_ON_NEW_QUERY = "OnNewQuery";
+
     private URL url;
     private String result;
-    private QueryListener queryListener;
     private Timer timer;
     private QueryTask queryTask;
     private boolean isStarted = false;
 
-    public QueryScheduler(URL url, QueryListener queryListener) {
-        this.url = url;
-        this.queryListener = queryListener;
+    public QueryScheduler() {
+
     }
 
-    public void startSchduler(){
-        isStarted = true;
-        timer = new Timer();
-        queryTask = new QueryTask();
-        timer.schedule(queryTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                isStarted = true;
+                timer = new Timer();
+                try {
+                    url = new URL(intent.getStringExtra("URL"));
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+                queryTask = new QueryTask();
+                timer.schedule(queryTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
+            }
+        }).start();
+        FullscreenActivity.isQueryServiceRunning = true;
+        return super.onStartCommand(intent, flags, startId);
     }
 
-    public void stopScheduler(){
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
         isStarted = false;
         timer.cancel();
+        FullscreenActivity.isQueryServiceRunning = false;
     }
 
     public boolean isStarted() {
         return isStarted;
     }
 
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
     private class QueryTask extends TimerTask {
 
         @Override
         public void run() {
-            //!! CHECK NETWORK STATE HERE !!
             //Query here!
             try {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -73,12 +100,14 @@ public class QueryScheduler {
                     connection.disconnect();
                     result = stringBuilder.toString();
                 }
-                    queryListener.onNewQuery(new JSONObject(result));
-            } catch (IOException | JSONException e) {
+                Intent intent = new Intent();
+                intent.setAction(ACTION_ON_NEW_QUERY);
+                intent.putExtra("Result",result);
+                sendBroadcast(intent);
+            } catch (IOException e) {
                 e.printStackTrace();
             }
             Log.d(TAG, "run:Query scheduler works...");
         }
     }
-
 }

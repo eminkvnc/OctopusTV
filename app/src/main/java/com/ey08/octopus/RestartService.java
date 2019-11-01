@@ -26,7 +26,7 @@ public class RestartService extends Service {
                 startActivity(intent);
                 stopSelf();
             }
-        },2000);
+        },5000);
 
     }
 }

@@ -55,13 +55,12 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener {
     @Override
     public void onPause() {
         super.onPause();
-        player.setPlayWhenReady(false);
+        //context.finishAffinity();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        player.setPlayWhenReady(true);
     }
 
     @Nullable

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -17,8 +18,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,6 +29,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
+
 import com.ey08.octopus.API.APIKeys;
 import com.ey08.octopus.API.CommandData;
 import com.ey08.octopus.API.DownloadCompleteListener;
@@ -37,17 +41,30 @@ import com.ey08.octopus.API.QueryListener;
 import com.ey08.octopus.API.QueryScheduler;
 import com.ey08.octopus.API.Reporter;
 import com.github.rongi.rotate_layout.layout.RotateLayout;
+import com.google.zxing.WriterException;
 
 import org.json.JSONObject;
+
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import static com.ey08.octopus.API.APIKeys.*;
+import androidmads.library.qrgenearator.QRGContents;
+import androidmads.library.qrgenearator.QRGEncoder;
 
-public class FullscreenActivity extends AppCompatActivity implements DownloadCompleteListener, QueryListener, NetworkStateListener {
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_REPORT;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_RESET;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_SYNC;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
+import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_0;
+import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_180;
+import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_270;
+import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_90;
+
+public class FullscreenActivity extends AppCompatActivity implements DownloadCompleteListener, QueryListener, NetworkStateListener, ScreenListener {
 
     public static final String TAG = "FullscreenActivity";
 
@@ -59,6 +76,8 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private static final String SHARED_PREF_OCTOPUS_DATA = "OctopusData";
     private static final String SHARED_PREF_PLAYLIST = "Playlist";
 
+    public static boolean isQueryServiceRunning = false;
+
     private final Handler mHideHandler = new Handler();
     private RotateLayout mainFrame;
     private FrameLayout playerFrame;
@@ -67,12 +86,16 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private WidgetFragment widgetFragment;
 
     private TextView textView;
+    private ImageView qrImageView;
     private GifDialog gifDialog;
     private Activity activity;
 
-    private NetworkStateBroadcastReciever reciever;
+    private NetworkStateBroadcastReceiver networkStateReciever;
+    private ScreenReciever screenReciever;
+    private QueryBroadcastReceiver queryBroadcastReceiver;
 
-    private QueryScheduler scheduler;
+    private Intent querySchedulerService = null;
+
     private ArrayList<CommandData> commands;
     private Playlist playlist;
     private Downloader downloader;
@@ -82,6 +105,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private String screenID;
 
     private boolean isScreenLogOn = false;
+    private boolean isScreenRegistered = false;
 
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -127,8 +151,18 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        reciever = new NetworkStateBroadcastReciever(this);
-        registerReceiver(reciever,intentFilter);
+        networkStateReciever = new NetworkStateBroadcastReceiver(this);
+        registerReceiver(networkStateReciever, intentFilter);
+
+        IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
+        screenReciever = new ScreenReciever(this);
+        registerReceiver(screenReciever, intentFilter2);
+
+
+        IntentFilter intentFilter3 = new IntentFilter(QueryScheduler.ACTION_ON_NEW_QUERY);
+        queryBroadcastReceiver = new QueryBroadcastReceiver(this);
+        registerReceiver(queryBroadcastReceiver,intentFilter3);
 
         mVisible = true;
         commands = new ArrayList<>();
@@ -139,6 +173,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
         playerFrame = findViewById(R.id.player_frame);
         widgetFrame = findViewById(R.id.widgets_frame);
+        qrImageView = findViewById(R.id.qr_code_imageView);
         textView = findViewById(R.id.textView);
         textView.setTextColor(Color.WHITE);
 
@@ -150,7 +185,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 toggle();
             }
         });
-        initFragments();
 
     }
 
@@ -183,10 +217,13 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     protected void onDestroy() {
         super.onDestroy();
         playerFragment.stopPlayer();
+        stopService(querySchedulerService);
+        unregisterReceiver(networkStateReciever);
+        unregisterReceiver(screenReciever);
+        unregisterReceiver(queryBroadcastReceiver);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(),RestartService.class);
         startService(intent);
-        unregisterReceiver(reciever);
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private void toggle() {
@@ -234,6 +271,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTARNAL_STORAGE);
         } else {
+            initFragments();
             initQueryScheduler();
         }
     }
@@ -246,6 +284,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    initFragments();
                     initQueryScheduler();
                 } else {
                     Toast.makeText(getApplicationContext(),
@@ -277,8 +316,10 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
             // Append screenID to url
             URL url = new URL("http://panel.tvoctopus.net/api/screen/"+screenID);
-            scheduler = new QueryScheduler(url, this);
-            scheduler.startSchduler();
+
+            //start schedurler service
+            querySchedulerService = new Intent(FullscreenActivity.this, QueryScheduler.class);
+            querySchedulerService.putExtra("URL",url.toString());
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -363,6 +404,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
         //process commands
         if(commands != null){
+            isScreenRegistered = true;
             if(commands.isEmpty()){
                 File file = getExternalFilesDir("OctopusDownloads");
                 if(file.list() != null){
@@ -420,23 +462,35 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             break;
 
                         case KEY_COMMANDS_RESET:
-                            /*clearApplicationData();
+                            clearApplicationData();
                             reporter.reportCommandStatus(command,"succeeded");
-                            finishAffinity();*/
-
+                            finishAffinity();
                             break;
 
                         case KEY_COMMANDS_TURN_ON_TV:
-                            String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
-                            ShellExecuter shellExecuterOn = new ShellExecuter(turnOnShellCommand);
-                            shellExecuterOn.start();
-
+                            File file1 = new File("/sys/class/cec/cmd");
+                            if(file1.exists()){
+                                String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
+                                ShellExecuter shellExecuterOn = new ShellExecuter(turnOnShellCommand);
+                                shellExecuterOn.start();
+                            } else{
+                                if(!playerFragment.isPlaying()){
+                                    playerFragment.launchPleyer();
+                                }
+                            }
                             break;
 
                         case KEY_COMMANDS_TURN_OFF_TV:
-                            String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
-                            ShellExecuter shellExecuterOff = new ShellExecuter(turnOffShellCommand);
-                            shellExecuterOff.start();
+                            File file2 = new File("/sys/class/cec/cmd");
+                            if(file2.exists()) {
+                                String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
+                                ShellExecuter shellExecuterOff = new ShellExecuter(turnOffShellCommand);
+                                shellExecuterOff.start();
+                            } else{
+                                if(playerFragment.isPlaying()){
+                                    // if cec cmd not found we can stop playing media from player fragment
+                                }
+                            }
                             break;
 
                         default:
@@ -456,18 +510,12 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 @Override
                 public void run() {
                     textView.setVisibility(View.GONE);
+                    qrImageView.setVisibility(View.GONE);
                 }
             });
         }else {
             // statement for error (ekran bulunamadı...)
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + screenID;
-                    textView.setVisibility(View.VISIBLE);
-                    textView.setText(firstMessage);
-                }
-            });
+            isScreenRegistered = false;
         }
     }
 
@@ -516,20 +564,56 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
     @Override
     public void networkConnected() {
-        if(scheduler != null){
-            if(!scheduler.isStarted()){
-                scheduler.startSchduler();
+        if(querySchedulerService != null){
+            if(!isQueryServiceRunning){
+                startService(querySchedulerService);
             }
+        }
+        if(!isScreenRegistered){
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + screenID;
+                    textView.setVisibility(View.VISIBLE);
+                    textView.setText(firstMessage);
+                    int height = Resources.getSystem().getDisplayMetrics().heightPixels;
+                    qrImageView.getLayoutParams().height = height*2/3;
+                    qrImageView.getLayoutParams().width = height*2/3;
+                    qrImageView.requestLayout();
+                    QRGEncoder qrgEncoder = new QRGEncoder(screenID, null, QRGContents.Type.TEXT, height*2/3);
+                    try {
+                        qrImageView.setVisibility(View.VISIBLE);
+                        qrImageView.setImageBitmap(qrgEncoder.encodeAsBitmap());
+                    } catch (WriterException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_connected), Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void networkDisconnected() {
-        if(scheduler != null){
-            if(scheduler.isStarted()){
-                scheduler.stopScheduler();
+        if(querySchedulerService != null){
+            if(isQueryServiceRunning){
+                stopService(querySchedulerService);
             }
+        }
+        if(!isScreenRegistered){
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    qrImageView.setVisibility(View.VISIBLE);
+                    int height = Resources.getSystem().getDisplayMetrics().heightPixels;
+                    qrImageView.getLayoutParams().height = height*2/3;
+                    qrImageView.getLayoutParams().width = height*2/3;
+                    qrImageView.requestLayout();
+                    qrImageView.setImageResource(R.drawable.ic_octopus_logo);
+                    textView.setVisibility(View.VISIBLE);
+                    textView.setText(getResources().getString(R.string.fullscreen_activity_connect_network_textview));
+                }
+            });
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_disconnected), Toast.LENGTH_SHORT).show();
     }
@@ -553,6 +637,18 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 }
             }, 500);
         }
+    }
+
+    @Override
+    public void onScreenLocked() {
+
+        Log.d(TAG, "onScreenLocked: ");
+    }
+
+    @Override
+    public void onScreenAwake() {
+
+        Log.d(TAG, "onScreenAwake: ");
     }
 }
 
