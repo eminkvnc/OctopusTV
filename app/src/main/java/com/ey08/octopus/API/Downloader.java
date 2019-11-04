@@ -29,8 +29,6 @@ public class Downloader {
     private DownloadCompleteListener downloadCompleteListener;
     private ArrayList<Long> downloadIDs;
 
-    private int downloadCount = 0;
-
     public Downloader(Context context, DownloadCompleteListener downloadCompleteListener) {
 
         this.context = context;

@@ -9,9 +9,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
 import com.ey08.octopus.API.MediaData;
 import com.ey08.octopus.API.Playlist;
 import com.ey08.octopus.API.PlaylistUpdateListener;
@@ -23,10 +25,11 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.squareup.picasso.Picasso;
+
 import java.io.File;
 import java.util.HashMap;
 
-public class PlayerFragment extends Fragment implements PlaylistUpdateListener {
+public class PlayerFragment extends Fragment implements PlaylistUpdateListener, PlaylistWaitListener {
 
     public static final String TAG = "PlayerFragment";
 
@@ -47,6 +50,10 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener {
     private boolean isPlaying = false;
     private Activity context;
     private MediaData currentMedia;
+    private MediaData previousMedia;
+
+    private Handler playlistLooperHandler = null;
+    private Runnable playlistLooperRunnable = null;
 
     public PlayerFragment() {
 
@@ -116,50 +123,41 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener {
             }
             isPlaylistUpdated = false;
             currentMedia = playlist.get(0);
+            previousMedia = playlist.get(playlist.size()-1);
         }else{
+            previousMedia = currentMedia;
             currentMedia = playlist.getNext();
-
         }
-        context.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
-                            context.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    //player.next();
-                                    playerView.setVisibility(View.VISIBLE);
-                                    imageView.setImageResource(android.R.color.black);
-                                    imageView.setVisibility(View.GONE);
-                                    player.prepare(playlist.getMediaSource(dataSourceFactory, downloadDir));
-                                    player.setPlayWhenReady(true);
-                                }
-                            });
-                        }
-                        if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_JPG)){
-                            context.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    playerView.setVisibility(View.GONE);
-                                    imageView.setVisibility(View.VISIBLE);
-                                    player.setPlayWhenReady(false);
-                                    Picasso.get()
-                                            .load("file://"+downloadDir+"/"+currentMedia.getName())
-                                            .placeholder(android.R.color.black)
-                                            .into(imageView);
-                                }
-                            });
-                        }
-                        if(!loopInterrupt){
-                            loopPlaylist(Long.valueOf(currentMedia.getTime()));
-                        }
-                    }
-                },delay);
+        playlistStartTime = System.currentTimeMillis();
+        playlistLooperRunnable = () -> {
+            if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
+                context.runOnUiThread(() -> {
+                    //player.next();
+                    playerView.setVisibility(View.VISIBLE);
+                    imageView.setImageResource(android.R.color.black);
+                    imageView.setVisibility(View.GONE);
+                    player.prepare(playlist.getMediaSource(dataSourceFactory, downloadDir));
+                    player.setPlayWhenReady(true);
+                });
             }
+            if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_JPG)){
+                context.runOnUiThread(() -> {
+                    playerView.setVisibility(View.GONE);
+                    imageView.setVisibility(View.VISIBLE);
+                    player.setPlayWhenReady(false);
+                    Picasso.get()
+                            .load("file://"+downloadDir+"/"+currentMedia.getName())
+                            .placeholder(android.R.color.black)
+                            .into(imageView);
+                });
+            }
+            if(!loopInterrupt){
+                loopPlaylist(Long.valueOf(currentMedia.getTime()));
+            }
+        };
+        context.runOnUiThread(() -> {
+            playlistLooperHandler = new Handler();
+            playlistLooperHandler.postDelayed(playlistLooperRunnable,delay);
         });
 
         // !! REPORT MEDIA DATA TO SERVER !!
@@ -201,7 +199,7 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener {
         this.context = context;
     }
 
-    public Playlist getLastPlaylist(){
+    private Playlist getLastPlaylist(){
         SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
         Playlist playlist = new Playlist();
         try {
@@ -221,4 +219,26 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener {
         return playlist;
     }
 
+
+    private Long playlistStopTime;
+    private Long playlistStartTime;
+    private Long playlistRemainingTime;
+
+    @Override
+    public void playlistWaited(boolean isWaiting) {
+        if(isWaiting){
+            if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
+                player.setPlayWhenReady(false);
+            }
+            playlistLooperHandler.removeCallbacks(playlistLooperRunnable);
+            playlistStopTime = System.currentTimeMillis();
+            playlistRemainingTime = Long.valueOf(previousMedia.getTime()) - (playlistStopTime - playlistStartTime);
+        }else{
+            if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
+                player.setPlayWhenReady(true);
+            }
+            playlistLooperHandler.postDelayed(playlistLooperRunnable, playlistRemainingTime);
+
+        }
+    }
 }

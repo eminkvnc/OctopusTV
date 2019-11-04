@@ -12,7 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.request.target.GlideDrawableImageViewTarget;
+import com.bumptech.glide.request.target.DrawableImageViewTarget;
 
 public class GifDialog extends Dialog {
     private ImageView imageView;
@@ -44,13 +44,12 @@ public class GifDialog extends Dialog {
             }
         });
 
-        GlideDrawableImageViewTarget imageViewTarget = new GlideDrawableImageViewTarget(imageView);
+
         Glide.with(context)
                 .load(R.drawable.octopus)
                 .placeholder(R.drawable.octopus)
                 .centerCrop()
-                .crossFade()
-                .into(imageViewTarget);
+                .into(new DrawableImageViewTarget(imageView));
     }
 
     @Override

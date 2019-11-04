@@ -42,7 +42,6 @@ public class Reporter {
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
                 String data = bufferedReader.readLine();
-
                 while (data != null){
 
                     result.append(data);

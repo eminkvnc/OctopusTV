@@ -7,8 +7,6 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
-import com.ey08.octopus.FullscreenActivity;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,7 +54,6 @@ public class QueryScheduler extends Service {
                 timer.schedule(queryTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
             }
         }).start();
-        FullscreenActivity.isQueryServiceRunning = true;
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -65,7 +62,6 @@ public class QueryScheduler extends Service {
         super.onDestroy();
         isStarted = false;
         timer.cancel();
-        FullscreenActivity.isQueryServiceRunning = false;
     }
 
     public boolean isStarted() {
