@@ -18,14 +18,11 @@ public class RestartService extends Service {
     public void onCreate() {
         super.onCreate();
         Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                Intent intent = new Intent(getApplicationContext(),FullscreenActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                stopSelf();
-            }
+        handler.postDelayed(() -> {
+            Intent intent = new Intent(getApplicationContext(),FullscreenActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            stopSelf();
         },5000);
 
     }

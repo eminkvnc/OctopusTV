@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.ey08.octopus.API.QueryListener;
-import com.ey08.octopus.API.QueryScheduler;
+import com.ey08.octopus.API.QuerySchedulerService;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,7 +20,7 @@ public class QueryBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if(intent.getAction().equals(QueryScheduler.ACTION_ON_NEW_QUERY)){
+        if(intent.getAction().equals(QuerySchedulerService.ACTION_ON_NEW_QUERY)){
             try {
                 String result = intent.getStringExtra("Result");
                 JSONObject jo = null;

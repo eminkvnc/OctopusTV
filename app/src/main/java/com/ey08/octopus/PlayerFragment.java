@@ -16,7 +16,7 @@ import androidx.fragment.app.Fragment;
 
 import com.ey08.octopus.API.MediaData;
 import com.ey08.octopus.API.Playlist;
-import com.ey08.octopus.API.PlaylistUpdateListener;
+import com.ey08.octopus.API.PlaylistListener;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -29,7 +29,7 @@ import com.squareup.picasso.Picasso;
 import java.io.File;
 import java.util.HashMap;
 
-public class PlayerFragment extends Fragment implements PlaylistUpdateListener, PlaylistWaitListener {
+public class PlayerFragment extends Fragment implements PlaylistListener {
 
     public static final String TAG = "PlayerFragment";
 
@@ -46,7 +46,6 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener, 
     private boolean loopInterrupt = false;
     private boolean isPlaylistUpdated = false;
 
-
     private boolean isPlaying = false;
     private Activity context;
     private MediaData currentMedia;
@@ -62,12 +61,18 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener, 
     @Override
     public void onPause() {
         super.onPause();
+        if(isPlaying){
+            playlistWaited(true);
+        }
         //context.finishAffinity();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        if(isPlaying){
+            playlistWaited(false);
+        }
     }
 
     @Nullable
@@ -95,19 +100,19 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener, 
     }
 
     // PLAYLIST OYNATMAYI DÜZELT
-    public void launchPleyer(){
+    void launchPlayer(){
         if((!updatedPlaylist.isEmpty() || !playlist.isEmpty()) && downloadDir.list() != null){
             isPlaying = true;
             loopPlaylist(0L);
         }
     }
 
-    public void stopPlayer(){
+    void stopPlayer(){
         player.release();
         loopInterrupt = true;
     }
 
-    public void loopPlaylist(Long delay){
+    private void loopPlaylist(Long delay){
 
         if(isPlaylistUpdated){
             this.playlist = updatedPlaylist;
@@ -170,7 +175,7 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener, 
         sp.edit().clear().apply();
         int mediaIndex = 0;
         for (MediaData media : playlist){
-            String playlistConcat = "";
+            String playlistConcat;
             playlistConcat = media.getName() + "%%%" + media.getType() + "%%%" + media.getMd5() + "%%%" + media.getTime();
             sp.edit().putString(String.valueOf(mediaIndex), playlistConcat).apply();
             mediaIndex++;
@@ -181,7 +186,7 @@ public class PlayerFragment extends Fragment implements PlaylistUpdateListener, 
         isPlaylistUpdated = true;
     }
 
-    public boolean isPlaying() {
+    boolean isPlaying() {
         return isPlaying;
     }
 

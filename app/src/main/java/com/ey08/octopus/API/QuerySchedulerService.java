@@ -19,9 +19,9 @@ import java.util.TimerTask;
 
 import javax.net.ssl.HttpsURLConnection;
 
-public class QueryScheduler extends Service {
+public class QuerySchedulerService extends Service {
 
-    private static final String TAG = "QueryScheduler";
+    private static final String TAG = "QuerySchedulerService";
 
     private final int SCHEDULE_PERIOD = 1000*30;
     private final int SCHEDULE_DELAY = 300;
@@ -34,7 +34,7 @@ public class QueryScheduler extends Service {
     private QueryTask queryTask;
     private boolean isStarted = false;
 
-    public QueryScheduler() {
+    public QuerySchedulerService() {
 
     }
 
@@ -61,6 +61,7 @@ public class QueryScheduler extends Service {
     public void onDestroy() {
         super.onDestroy();
         isStarted = false;
+        queryTask.cancel();
         timer.cancel();
     }
 
