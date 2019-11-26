@@ -37,7 +37,10 @@ public class Reporter {
 
     public static String TAG = "Reporter";
 
+    public static final String COMMAND_STATUS_SUCCEEDED = "succeeded";
+    public static final String COMMAND_STATUS_INPROGRESS = "in-progress";
     private String queryUrl = "http://panel.tvoctopus.net/";
+    private CommandData downloadCommand;
 
     public void reportCommandStatus(CommandData commandData, String status){
 
@@ -124,7 +127,7 @@ public class Reporter {
                 jo.put("data",joData);
                 Log.d(TAG, "reportDeviceStatus: "+jo.toString());
 
-                //!! send http request to server !!
+                //TODO: Send http request to server.
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -184,6 +187,14 @@ public class Reporter {
             }
         } catch (Exception ex) { } // for now eat exceptions
         return "";
+    }
+
+    public CommandData getDownloadCommand() {
+        return downloadCommand;
+    }
+
+    public void setDownloadCommand(CommandData downloadCommand) {
+        this.downloadCommand = downloadCommand;
     }
 
 

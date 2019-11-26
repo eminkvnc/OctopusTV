@@ -165,7 +165,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
             playlistLooperHandler.postDelayed(playlistLooperRunnable,delay);
         });
 
-        // !! REPORT MEDIA DATA TO SERVER !!
+        // TODO: Report media data to server.
     }
 
     @Override

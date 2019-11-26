@@ -216,7 +216,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         unregisterReceiver(queryBroadcastReceiver);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(),RestartService.class);
-        startService(intent);
+        //startService(intent);
     }
 
     private void toggle() {
@@ -308,7 +308,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             // Append screenID to url
             URL url = new URL("http://panel.tvoctopus.net/api/screen/"+screenID);
 
-            //start schedurler service
+            //start scheduler service
             querySchedulerService = new Intent(FullscreenActivity.this, QuerySchedulerService.class);
             querySchedulerService.putExtra("URL",url.toString());
             startService(querySchedulerService);
@@ -410,6 +410,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                                 File downloadedFile = new File(downloadDir,media.getName());
                                 if(!downloadedFile.exists()){
                                     downloader.startDownload(media.getName());
+                                    reporter.setDownloadCommand(command);
                                 }
                                 sp.edit().putString(String.valueOf(i), media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime()).apply();
                                 i++;
@@ -442,9 +443,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
                         case KEY_COMMANDS_REPORT:
                             //process report command
-
                             reporter.reportDeviceStatus(getApplicationContext());
-                            // !! REPORT DEVICE STATUS TO SERVER !!
                             break;
 
                         case KEY_COMMANDS_RESET:
@@ -454,6 +453,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             break;
 
                         case KEY_COMMANDS_TURN_ON_TV:
+                            //TODO: Implement cec commands.
                             File file1 = new File("/sys/class/cec/cmd");
                             if(file1.exists()){
                                 //String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
@@ -470,6 +470,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             break;
 
                         case KEY_COMMANDS_TURN_OFF_TV:
+                            //TODO: Implement cec commands.
                             File file2 = new File("/sys/class/cec/cmd");
                             if(file2.exists()) {
                                 //String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
@@ -481,7 +482,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             } else{
                                 if(playerFragment.isPlaying()){
                                     // if cec cmd not found we can stop playing media from player fragment
-
+                                    //TODO: Stop player from PlayerFragment.
                                 }
                             }
                             break;
@@ -490,7 +491,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             // do something
                             break;
                     }
-                    // !! REPORT COMMAND EXECUTION STATUS TO SERVER !!
                 }
                 File file = getExternalFilesDir("OctopusDownloads");
                 if(file != null && file.list() != null && !isDownloading){
@@ -504,6 +504,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
         }else {
             // statement for error (ekran bulunamadı...)
+            // show qr-code
             isScreenRegistered = false;
 
             int orientation = getResources().getConfiguration().orientation;
@@ -539,8 +540,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         }
     }
 
-
-
     @Override
     public void downloadComplete(boolean isAllDownloadsComplete) {
         if(isAllDownloadsComplete){
@@ -560,8 +559,10 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             int screenOrientation = sp.getInt("ScreenOrientation",-1);
             rotateScreen(screenOrientation);
             isDownloading = false;
+            reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
         }else{
-            // !! REPORT DOWNLOAD STATUS TO SERVER !!
+            //TODO: Send download progress data from Downloader.
+            reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
         }
 
     }
@@ -574,6 +575,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 gifDialog.show();
             }
         });
+
     }
     int qrDimention = 0;
     @Override
