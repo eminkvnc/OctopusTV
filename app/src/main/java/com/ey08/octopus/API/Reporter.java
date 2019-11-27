@@ -17,10 +17,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
@@ -89,12 +91,9 @@ public class Reporter {
             try {
                 ipAddress = getIPAddress(true);
                 macAddress = getMacAddress();
-
                 SharedPreferences sharedPreferences = context.getSharedPreferences(FullscreenActivity.SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
                 screenID = sharedPreferences.getString("screenID",null);
-
                 playerVersion = BuildConfig.VERSION_NAME;
-
                 WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService (Context.WIFI_SERVICE);
                 WifiInfo info;
                 if (wifiManager != null) {
@@ -103,7 +102,6 @@ public class Reporter {
                 }else {
                     wifiSSID = "";
                 }
-
                 File file1 = new File("/sys/class/cec/cmd");
                 if (file1.exists()){
                     cecStatus = "true";
@@ -128,8 +126,32 @@ public class Reporter {
                 Log.d(TAG, "reportDeviceStatus: "+jo.toString());
 
                 //TODO: Send http request to server.
+                String urlString = queryUrl+"api/screen/"+screenID;
+                URL commandQueryUrl = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) commandQueryUrl.openConnection();
+                connection.setRequestMethod("POST");
+                connection.addRequestProperty("Accept","application/json");
+                connection.addRequestProperty("Content-Type","application/json");
+                connection.setDoOutput(true);
+                connection.setInstanceFollowRedirects(false);
+                OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8);
+                writer.write(jo.toString());
+                writer.close();
 
-            } catch (JSONException e) {
+                if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
+                    InputStream inputStream = connection.getInputStream();
+                    InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                    BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                    String data = bufferedReader.readLine();
+                    StringBuilder result = new StringBuilder();
+                    while (data != null){
+                        result.append(data);
+                        data = bufferedReader.readLine();
+                    }
+                    Log.d(TAG, "reportDeviceStatus: "+result.toString());
+                }
+
+            } catch (JSONException | IOException e) {
                 e.printStackTrace();
             }
         }).start();

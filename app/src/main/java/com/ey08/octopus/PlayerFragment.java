@@ -99,7 +99,6 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         return v;
     }
 
-    // PLAYLIST OYNATMAYI DÜZELT
     void launchPlayer(){
         if((!updatedPlaylist.isEmpty() || !playlist.isEmpty()) && downloadDir.list() != null){
             isPlaying = true;

@@ -70,7 +70,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
     public static final String TAG = "FullscreenActivity";
 
-    private static final int PERMISSIONS_REQUEST_WRITE_EXTARNAL_STORAGE = 3001;
+    private static final int PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 3001;
     private static final boolean AUTO_HIDE = true;
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
     private static final int UI_ANIMATION_DELAY = 100;
@@ -262,7 +262,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private void checkPermission(Context context, Activity activity) {
 
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTARNAL_STORAGE);
+            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
         } else {
             initFragments();
             initQueryScheduler();
@@ -272,7 +272,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTARNAL_STORAGE) {
+        if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE) {
             // If request is cancelled, the result arrays are empty.
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -561,7 +561,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             isDownloading = false;
             reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
         }else{
-            //TODO: Send download progress data from Downloader.
+            //TODO: Send download progress data from Downloader. Waiting for API command structure.
             reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
         }
 
