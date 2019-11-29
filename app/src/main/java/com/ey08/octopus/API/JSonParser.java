@@ -15,16 +15,14 @@ public class JSonParser {
 
     public static final String TAG = "JSonParser";
 
-    public JSONObject input;
     public ArrayList<CommandData> commands;
 
-    public JSonParser(JSONObject input) {
-        this.input = input;
-        commands = new ArrayList<>();
+    public JSonParser() {
+
     }
 
-    public ArrayList<CommandData> parseCommands(){
-
+    public ArrayList<CommandData> parseCommands(JSONObject input){
+        commands = new ArrayList<>();
         String uuid;
         String command;
         JSONObject params;
@@ -127,4 +125,23 @@ public class JSonParser {
         Log.d(TAG, "parseParams: parse complete");
 
     }
+
+    public HashMap<String, String> parseWeatherData(JSONObject input){
+
+        HashMap<String, String> weatherData = new HashMap<>();
+
+        try {
+            String icon = input.getJSONArray("weather").getJSONObject(0).getString("icon");
+            String temperature = input.getJSONObject("main").getString("temp");
+            String location = input.getString("name");
+            weatherData.put("icon",icon);
+            weatherData.put("temperature",temperature);
+            weatherData.put("location",location);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return weatherData;
+    }
+
+
 }

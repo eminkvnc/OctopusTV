@@ -125,7 +125,6 @@ public class Reporter {
                 jo.put("data",joData);
                 Log.d(TAG, "reportDeviceStatus: "+jo.toString());
 
-                //TODO: Send http request to server.
                 String urlString = queryUrl+"api/screen/"+screenID;
                 URL commandQueryUrl = new URL(urlString);
                 HttpURLConnection connection = (HttpURLConnection) commandQueryUrl.openConnection();

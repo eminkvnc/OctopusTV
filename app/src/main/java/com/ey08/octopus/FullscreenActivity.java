@@ -67,8 +67,10 @@ import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_270;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_90;
+import static com.ey08.octopus.API.QuerySchedulerService.ACTION_ON_NEW_QUERY;
+import static com.ey08.octopus.WeatherService.ACTION_WEATHER_QUERY;
 
-public class FullscreenActivity extends AppCompatActivity implements DownloadCompleteListener, QueryListener, NetworkStateListener, ScreenListener {
+public class FullscreenActivity extends AppCompatActivity implements DownloadCompleteListener, QueryListener, NetworkStateListener, ScreenListener, WeatherListener {
 
     public static final String TAG = "FullscreenActivity";
 
@@ -84,6 +86,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private RotateLayout mainFrame;
     private FrameLayout playerFrame;
     private FrameLayout widgetFrame;
+    private ConstraintLayout constraintLayout;
     private PlayerFragment playerFragment;
     private WidgetFragment widgetFragment;
 
@@ -95,8 +98,10 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private NetworkStateBroadcastReceiver networkStateReceiver;
     private ScreenReciever screenReciever;
     private QueryBroadcastReceiver queryBroadcastReceiver;
+    private WeatherBroadcastReceiver weatherBroadcastReceiver;
 
     private Intent querySchedulerService = null;
+    private Intent weatherService = null;
 
     private ArrayList<CommandData> commands;
     private Playlist playlist;
@@ -110,6 +115,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private boolean isScreenLogOn = false;
     private boolean isScreenRegistered = true;
     private boolean isQueryServiceRunning = false;
+    private boolean isWeatherServiceRunning = false;
 
 
     private final Runnable mHidePart2Runnable = new Runnable() {
@@ -160,9 +166,13 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         registerReceiver(screenReciever, intentFilter2);
 
 
-        IntentFilter intentFilter3 = new IntentFilter(QuerySchedulerService.ACTION_ON_NEW_QUERY);
-        queryBroadcastReceiver = new QueryBroadcastReceiver(this);
+        IntentFilter intentFilter3 = new IntentFilter(ACTION_ON_NEW_QUERY);
+        queryBroadcastReceiver = new QueryBroadcastReceiver(this, this);
         registerReceiver(queryBroadcastReceiver,intentFilter3);
+
+        IntentFilter intentFilter4 = new IntentFilter(ACTION_WEATHER_QUERY);
+        weatherBroadcastReceiver = new WeatherBroadcastReceiver(this, this);
+        registerReceiver(weatherBroadcastReceiver,intentFilter4);
 
         mVisible = true;
         commands = new ArrayList<>();
@@ -173,6 +183,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
         playerFrame = findViewById(R.id.player_frame);
         widgetFrame = findViewById(R.id.widgets_frame);
+        constraintLayout = findViewById(R.id.activity_fullscreen_constraint_layout);
         qrImageView = findViewById(R.id.qr_code_imageView);
         textView = findViewById(R.id.textView);
         textView.setTextColor(Color.WHITE);
@@ -181,14 +192,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
         mainFrame.setOnClickListener(view -> toggle());
 
-        Handler handler = new Handler();
-        handler.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15),10000);
-        Handler handler1 = new Handler();
-        handler1.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15),20000);
-        Handler handler2 = new Handler();
-        handler2.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15),30000);
-        Handler handler3 = new Handler();
-        handler3.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15),40000);
     }
 
     @Override
@@ -221,9 +224,11 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         super.onDestroy();
         playerFragment.stopPlayer();
         stopService(querySchedulerService);
+        startService(weatherService);
         unregisterReceiver(networkStateReceiver);
         unregisterReceiver(screenReciever);
         unregisterReceiver(queryBroadcastReceiver);
+        unregisterReceiver(weatherBroadcastReceiver);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(),RestartService.class);
         //startService(intent);
@@ -302,6 +307,13 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         widgetFragment = new WidgetFragment();
         setFragment(playerFrame, playerFragment);
         setFragment(widgetFrame, widgetFragment);
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
+            }
+        },300);
     }
 
     private void initQueryScheduler(){
@@ -323,6 +335,13 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             querySchedulerService = new Intent(FullscreenActivity.this, QuerySchedulerService.class);
             querySchedulerService.putExtra("URL",url.toString());
             startService(querySchedulerService);
+            isQueryServiceRunning = true;
+            //start weather service
+            //TODO: Edit url with API location data.
+            String weatherurlString = "https://api.openweathermap.org/data/2.5/weather?q=kocaeli&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+            weatherService = new Intent(FullscreenActivity.this, WeatherService.class);
+            weatherService.putExtra("weatherURL",weatherurlString);
+            startService(weatherService);
             isQueryServiceRunning = true;
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -391,42 +410,40 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         switch (position){
             case WidgetFragment.POSITION_TOP:
                 widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
-                ConstraintLayout.LayoutParams paramsBottom = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
-                paramsBottom.startToStart = R.id.activity_fullscreen_constraint_layout;
-                paramsBottom.endToEnd = R.id.activity_fullscreen_constraint_layout;
-                paramsBottom.bottomToBottom = R.id.activity_fullscreen_constraint_layout;
-                paramsBottom.topToTop = 0;
-                widgetFrame.setLayoutParams(paramsBottom);
+                ConstraintLayout.LayoutParams paramsTop = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
+                paramsTop.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsTop.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsTop.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                widgetFrame.setLayoutParams(paramsTop);
                 widgetFrame.requestLayout();
                 break;
             case WidgetFragment.POSITION_BOTTOM:
+
                 widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
-                ConstraintLayout.LayoutParams paramsTop = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
-                paramsTop.startToStart = R.id.activity_fullscreen_constraint_layout;
-                paramsTop.endToEnd = R.id.activity_fullscreen_constraint_layout;
-                paramsTop.topToTop = R.id.activity_fullscreen_constraint_layout;
-                paramsTop.bottomToBottom = 0;
-                widgetFrame.setLayoutParams(paramsTop);
+                ConstraintLayout.LayoutParams paramsBottom = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
+                paramsBottom.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsBottom.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsBottom.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+                widgetFrame.setLayoutParams(paramsBottom);
                 widgetFrame.requestLayout();
                 break;
             case WidgetFragment.POSITION_LEFT:
                 widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
-                ConstraintLayout.LayoutParams paramsRight = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
-                paramsRight.bottomToBottom = R.id.activity_fullscreen_constraint_layout;
-                paramsRight.rightToRight = R.id.activity_fullscreen_constraint_layout;
-                paramsRight.topToTop = R.id.activity_fullscreen_constraint_layout;
-                paramsRight.leftToLeft = 0;
-                widgetFrame.setLayoutParams(paramsRight);
+                ConstraintLayout.LayoutParams paramsLeft = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
+                paramsLeft.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsLeft.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsLeft.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                widgetFrame.setLayoutParams(paramsLeft);
                 widgetFrame.requestLayout();
                 break;
             case WidgetFragment.POSITION_RIGHT:
+
                 widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
-                ConstraintLayout.LayoutParams paramsLeft = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
-                paramsLeft.leftToLeft = R.id.activity_fullscreen_constraint_layout;
-                paramsLeft.bottomToBottom = R.id.activity_fullscreen_constraint_layout;
-                paramsLeft.topToTop = R.id.activity_fullscreen_constraint_layout;
-                paramsLeft.rightToRight = 0;
-                widgetFrame.setLayoutParams(paramsLeft);
+                ConstraintLayout.LayoutParams paramsRight = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
+                paramsRight.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsRight.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsRight.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                widgetFrame.setLayoutParams(paramsRight);
                 widgetFrame.requestLayout();
                 break;
         }
@@ -442,9 +459,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         });
         Log.d("QuerySchedulerService", "onNewQuery: "+result);
         //PARSE COMMANDS HERE
-        JSonParser parser = new JSonParser(result);
-        commands = parser.parseCommands();
-
+        commands = new JSonParser().parseCommands(result);
         //process commands
         if(commands != null){
             isScreenRegistered = true;
@@ -489,6 +504,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                             }
 
                             //TODO: Handle widget bar position, width and height when API results available for widgets. (get data from metadata)
+                            //TODO: Cache widget data for offline usage.
 
                             //setWidgetBarPosition(WidgetFragment.POSITION_TOP);
 
@@ -605,6 +621,12 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     }
 
     @Override
+    public void weatherUpdated(JSONObject result) {
+        Log.d(TAG, "weatherUpdated: "+result.toString());
+        widgetFragment.updateWeather(new JSonParser().parseWeatherData(result));
+    }
+
+    @Override
     public void downloadComplete(boolean isAllDownloadsComplete) {
         if(isAllDownloadsComplete){
             File file = new File(Downloader.DOWNLOAD_DIR);
@@ -659,6 +681,12 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             if(isQueryServiceRunning){
                 stopService(querySchedulerService);
                 isQueryServiceRunning = false;
+            }
+        }
+        if(weatherService != null){
+            if(isWeatherServiceRunning){
+                stopService(weatherService);
+                isWeatherServiceRunning = false;
             }
         }
         if(!isScreenRegistered){
