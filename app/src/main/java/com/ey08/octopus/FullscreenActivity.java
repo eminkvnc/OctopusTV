@@ -21,12 +21,14 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -179,6 +181,14 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
         mainFrame.setOnClickListener(view -> toggle());
 
+        Handler handler = new Handler();
+        handler.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15),10000);
+        Handler handler1 = new Handler();
+        handler1.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15),20000);
+        Handler handler2 = new Handler();
+        handler2.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15),30000);
+        Handler handler3 = new Handler();
+        handler3.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15),40000);
     }
 
     @Override
@@ -291,6 +301,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         playerFragment.setContext(activity);
         widgetFragment = new WidgetFragment();
         setFragment(playerFrame, playerFragment);
+        setFragment(widgetFrame, widgetFragment);
     }
 
     private void initQueryScheduler(){
@@ -374,6 +385,53 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             deleteDirectory(file);
         }
     }
+
+    public void setWidgetBarPosition(int position, int widthPercentage, int heightPercentage){
+
+        switch (position){
+            case WidgetFragment.POSITION_TOP:
+                widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
+                ConstraintLayout.LayoutParams paramsBottom = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
+                paramsBottom.startToStart = R.id.activity_fullscreen_constraint_layout;
+                paramsBottom.endToEnd = R.id.activity_fullscreen_constraint_layout;
+                paramsBottom.bottomToBottom = R.id.activity_fullscreen_constraint_layout;
+                paramsBottom.topToTop = 0;
+                widgetFrame.setLayoutParams(paramsBottom);
+                widgetFrame.requestLayout();
+                break;
+            case WidgetFragment.POSITION_BOTTOM:
+                widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
+                ConstraintLayout.LayoutParams paramsTop = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
+                paramsTop.startToStart = R.id.activity_fullscreen_constraint_layout;
+                paramsTop.endToEnd = R.id.activity_fullscreen_constraint_layout;
+                paramsTop.topToTop = R.id.activity_fullscreen_constraint_layout;
+                paramsTop.bottomToBottom = 0;
+                widgetFrame.setLayoutParams(paramsTop);
+                widgetFrame.requestLayout();
+                break;
+            case WidgetFragment.POSITION_LEFT:
+                widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
+                ConstraintLayout.LayoutParams paramsRight = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
+                paramsRight.bottomToBottom = R.id.activity_fullscreen_constraint_layout;
+                paramsRight.rightToRight = R.id.activity_fullscreen_constraint_layout;
+                paramsRight.topToTop = R.id.activity_fullscreen_constraint_layout;
+                paramsRight.leftToLeft = 0;
+                widgetFrame.setLayoutParams(paramsRight);
+                widgetFrame.requestLayout();
+                break;
+            case WidgetFragment.POSITION_RIGHT:
+                widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
+                ConstraintLayout.LayoutParams paramsLeft = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
+                paramsLeft.leftToLeft = R.id.activity_fullscreen_constraint_layout;
+                paramsLeft.bottomToBottom = R.id.activity_fullscreen_constraint_layout;
+                paramsLeft.topToTop = R.id.activity_fullscreen_constraint_layout;
+                paramsLeft.rightToRight = 0;
+                widgetFrame.setLayoutParams(paramsLeft);
+                widgetFrame.requestLayout();
+                break;
+        }
+    }
+
     //This method only triggers when network connection is available.
     @Override
     public void onNewQuery(JSONObject result) {
@@ -429,6 +487,12 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                                     sp2.edit().putInt("ScreenOrientation",orientation).apply();
                                 }
                             }
+
+                            //TODO: Handle widget bar position, width and height when API results available for widgets. (get data from metadata)
+
+                            //setWidgetBarPosition(WidgetFragment.POSITION_TOP);
+
+
                             // if there are no downloads update ui with new playlist
                             if(!isDownloading){
                                 playerFragment.playlistUpdated(playlist);

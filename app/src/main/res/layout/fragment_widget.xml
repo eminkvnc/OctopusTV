@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_linear_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <view
-        android:id="@+id/widget_recycle_view"
-        class="androidx.appcompat.app.AlertController$RecycleListView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-
-</FrameLayout>
+    android:layout_height="match_parent"
+    android:orientation="vertical"></LinearLayout>

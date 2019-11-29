@@ -83,14 +83,17 @@ public class JSonParser {
                         }
 
                         //Day schedule mapping
+                        if(params.has(KEY_PARAMS_SCHEDULE)){
                         JSONObject dayScheduleJSon = params.getJSONObject(KEY_PARAMS_SCHEDULE);
-                        for(int j = 1; j < 8 ; j++){
-                            DayOptions dayOptions = new DayOptions(
-                                    dayScheduleJSon.get("day_"+j+"_on").toString(),
-                                    dayScheduleJSon.get("day_"+j+"_off").toString(),
-                                    dayScheduleJSon.getString("day_"+j+"_status"));
-                            dayScheduleMap.put(j,dayOptions);
+                            for(int j = 1; j < 8 ; j++){
+                                DayOptions dayOptions = new DayOptions(
+                                        dayScheduleJSon.get("day_"+j+"_on").toString(),
+                                        dayScheduleJSon.get("day_"+j+"_off").toString(),
+                                        dayScheduleJSon.getString("day_"+j+"_status"));
+                                dayScheduleMap.put(j,dayOptions);
+                            }
                         }
+                        //TODO: Check params object has keys.
                         //Metadata mapping
                         metaData.put(KEY_PARAMS_MASTER,params.get(KEY_PARAMS_MASTER));
                         metaData.put(KEY_PARAMS_IS_MASTER,params.get(KEY_PARAMS_IS_MASTER));
