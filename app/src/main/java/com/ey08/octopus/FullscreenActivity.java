@@ -53,6 +53,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.UUID;
 
 import androidmads.library.qrgenearator.QRGContents;
@@ -63,6 +64,10 @@ import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_RESET;
 import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_SYNC;
 import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
 import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_270;
@@ -167,11 +172,11 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
 
         IntentFilter intentFilter3 = new IntentFilter(ACTION_ON_NEW_QUERY);
-        queryBroadcastReceiver = new QueryBroadcastReceiver(this, this);
+        queryBroadcastReceiver = new QueryBroadcastReceiver(this);
         registerReceiver(queryBroadcastReceiver,intentFilter3);
 
         IntentFilter intentFilter4 = new IntentFilter(ACTION_WEATHER_QUERY);
-        weatherBroadcastReceiver = new WeatherBroadcastReceiver(this, this);
+        weatherBroadcastReceiver = new WeatherBroadcastReceiver(this);
         registerReceiver(weatherBroadcastReceiver,intentFilter4);
 
         mVisible = true;
@@ -224,7 +229,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         super.onDestroy();
         playerFragment.stopPlayer();
         stopService(querySchedulerService);
-        startService(weatherService);
+        stopService(weatherService);
         unregisterReceiver(networkStateReceiver);
         unregisterReceiver(screenReciever);
         unregisterReceiver(queryBroadcastReceiver);
@@ -338,7 +343,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             isQueryServiceRunning = true;
             //start weather service
             //TODO: Edit url with API location data.
-            String weatherurlString = "https://api.openweathermap.org/data/2.5/weather?q=kocaeli&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+            String weatherurlString = "https://api.openweathermap.org/data/2.5/weather?q=istanbul&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
             weatherService = new Intent(FullscreenActivity.this, WeatherService.class);
             weatherService.putExtra("weatherURL",weatherurlString);
             startService(weatherService);
@@ -503,12 +508,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                                 }
                             }
 
-                            //TODO: Handle widget bar position, width and height when API results available for widgets. (get data from metadata)
-                            //TODO: Cache widget data for offline usage.
-
-                            //setWidgetBarPosition(WidgetFragment.POSITION_TOP);
-
-
                             // if there are no downloads update ui with new playlist
                             if(!isDownloading){
                                 playerFragment.playlistUpdated(playlist);
@@ -519,6 +518,35 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                                     playerFragment.launchPlayer();
                                 }
                             }
+
+                            //TODO: Handle widget bar position, width and height when API results available for widgets. (temporarily used wifi-SSID and overscan metadata fields.)
+                            //TODO: Cache widget data for offline usage.
+                            //TODO: Activate-deactivate weather widget to result of OctopusTV API request.
+                            if(command.getMetaData() != null){
+                                HashMap<String, Object> hashMap = command.getMetaData();
+                                String url = "https://api.openweathermap.org/data/2.5/weather?q="+hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
+                                url = url+"&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+                                weatherService.putExtra("weatherURL",url);
+                                startService(weatherService);
+                                Log.d(TAG, "onNewQuery: top: "+hashMap.get(KEY_PARAMS_OVERSCAN_TOP));
+                                Log.d(TAG, "onNewQuery: bottom: "+hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM));
+                                Log.d(TAG, "onNewQuery: left: "+hashMap.get(KEY_PARAMS_OVERSCAN_LEFT));
+                                Log.d(TAG, "onNewQuery: right: "+hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT));
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
+                                }
+                            }
+
+
                             break;
 
                         case KEY_COMMANDS_REPORT:
@@ -581,6 +609,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
             textView.setVisibility(View.GONE);
             qrImageView.setVisibility(View.GONE);
+            widgetFrame.setVisibility(View.VISIBLE);
 
         }else {
             // statement for error (ekran bulunamadı...)
@@ -612,6 +641,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
             runOnUiThread(() -> {
                 String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + screenID;
+                widgetFrame.setVisibility(View.GONE);
                 textView.setText(firstMessage);
                 qrImageView.setImageBitmap(qrBitmap);
                 textView.setVisibility(View.VISIBLE);

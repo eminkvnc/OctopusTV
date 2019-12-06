@@ -75,6 +75,11 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         }
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -129,11 +134,23 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
             currentMedia = playlist.get(0);
             previousMedia = playlist.get(playlist.size()-1);
         }else{
-            previousMedia = currentMedia;
+            if(currentMedia != null){
+                previousMedia = currentMedia;
+            }
             currentMedia = playlist.getNext();
         }
         playlistStartTime = System.currentTimeMillis();
+
+
         playlistLooperRunnable = () -> {
+            currentMedia.setStartTime(System.currentTimeMillis());
+            if(previousMedia != null){
+                previousMedia.setStopTime(System.currentTimeMillis());
+                if(previousMedia.getStartTime() != -1 && previousMedia.getStopTime() != -1){
+                    FirebaseHelper firebaseHelper = FirebaseHelper.getInstance();
+                    firebaseHelper.addMediaData(previousMedia);
+                }
+            }
             if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
                 context.runOnUiThread(() -> {
                     //player.next();

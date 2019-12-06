@@ -13,11 +13,9 @@ import org.json.JSONObject;
 public class QueryBroadcastReceiver extends BroadcastReceiver {
 
     QueryListener queryListener;
-    WeatherListener weatherListener;
 
-    public QueryBroadcastReceiver(QueryListener queryListener, WeatherListener weatherListener) {
+    public QueryBroadcastReceiver(QueryListener queryListener) {
         this.queryListener = queryListener;
-        this.weatherListener = weatherListener;
     }
 
     @Override
@@ -30,19 +28,6 @@ public class QueryBroadcastReceiver extends BroadcastReceiver {
                     jo = new JSONObject(result);
                 }
                 queryListener.onNewQuery(jo);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if(intent.getAction().equals(WeatherService.ACTION_WEATHER_QUERY)){
-            try {
-                String result = intent.getStringExtra("WeatherResult");
-                JSONObject jo = null;
-                if (result != null) {
-                    jo = new JSONObject(result);
-                }
-                weatherListener.weatherUpdated(jo);
             } catch (JSONException e) {
                 e.printStackTrace();
             }

@@ -42,6 +42,9 @@ public class WeatherService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         new Thread(() -> {
             isStarted = true;
+            if(timer != null){
+                timer.cancel();
+            }
             timer = new Timer();
             try {
                 url = new URL(intent.getStringExtra("weatherURL"));

@@ -9,6 +9,8 @@ public class MediaData {
     private String type;
     private String md5;
     private String time;
+    private long startTime = -1;
+    private long stopTime = -1;
 
     public MediaData(String name, String type, String md5, String time) {
         this.name = name;
@@ -49,5 +51,21 @@ public class MediaData {
 
     public void setTime(String time) {
         this.time = time;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
+    }
+
+    public long getStopTime() {
+        return stopTime;
+    }
+
+    public void setStopTime(long stopTime) {
+        this.stopTime = stopTime;
     }
 }

@@ -4,18 +4,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import com.ey08.octopus.API.QueryListener;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class WeatherBroadcastReceiver extends BroadcastReceiver {
 
-    QueryListener queryListener;
     WeatherListener weatherListener;
 
-    public WeatherBroadcastReceiver(QueryListener queryListener, WeatherListener weatherListener) {
-        this.queryListener = queryListener;
+    public WeatherBroadcastReceiver(WeatherListener weatherListener) {
         this.weatherListener = weatherListener;
     }
 

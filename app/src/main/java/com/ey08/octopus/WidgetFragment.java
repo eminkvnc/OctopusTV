@@ -19,7 +19,6 @@ import androidx.fragment.app.Fragment;
 import java.util.HashMap;
 
 public class WidgetFragment extends Fragment {
-    //TODO: Activate-deactivate weather widget to result of OctopusTV API request.
 
 
     HashMap<String, Integer> iconsMap = new HashMap<>();
