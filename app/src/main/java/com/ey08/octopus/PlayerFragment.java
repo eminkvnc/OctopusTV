@@ -99,7 +99,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         player.setRepeatMode(Player.REPEAT_MODE_ALL);
         playerView.setPlayer(player);
         downloadDir = context.getExternalFilesDir("OctopusDownloads");
-        updatedPlaylist = new Playlist();
+        updatedPlaylist = getLastPlaylist();
         playlist = getLastPlaylist();
         return v;
     }

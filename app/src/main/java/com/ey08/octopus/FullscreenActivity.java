@@ -313,12 +313,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         setFragment(playerFrame, playerFragment);
         setFragment(widgetFrame, widgetFragment);
         Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
-            }
-        },300);
+        handler.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15),300);
     }
 
     private void initQueryScheduler(){
@@ -342,10 +337,10 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             startService(querySchedulerService);
             isQueryServiceRunning = true;
             //start weather service
-            //TODO: Edit url with API location data.
-            String weatherurlString = "https://api.openweathermap.org/data/2.5/weather?q=istanbul&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+            //TODO: Get cached weather data.
+            String weatherUrlString = "https://api.openweathermap.org/data/2.5/weather?q=istanbul&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
             weatherService = new Intent(FullscreenActivity.this, WeatherService.class);
-            weatherService.putExtra("weatherURL",weatherurlString);
+            weatherService.putExtra("weatherURL",weatherUrlString);
             startService(weatherService);
             isQueryServiceRunning = true;
         } catch (MalformedURLException e) {
@@ -521,7 +516,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
                             //TODO: Handle widget bar position, width and height when API results available for widgets. (temporarily used wifi-SSID and overscan metadata fields.)
                             //TODO: Cache widget data for offline usage.
-                            //TODO: Activate-deactivate weather widget to result of OctopusTV API request.
                             if(command.getMetaData() != null){
                                 HashMap<String, Object> hashMap = command.getMetaData();
                                 String url = "https://api.openweathermap.org/data/2.5/weather?q="+hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
@@ -534,15 +528,30 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                                 Log.d(TAG, "onNewQuery: right: "+hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT));
                                 if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
                                     setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
                                 }
                                 if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
                                     setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
                                 }
                                 if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
                                     setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
                                 }
                                 if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
                                     setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("0")&&
+                                        hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("0")&&
+                                        hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("0")&&
+                                        hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("0")){
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            widgetFrame.setVisibility(View.INVISIBLE);
+                                        }
+                                    });
                                 }
                             }
 
@@ -609,7 +618,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
             textView.setVisibility(View.GONE);
             qrImageView.setVisibility(View.GONE);
-            widgetFrame.setVisibility(View.VISIBLE);
 
         }else {
             // statement for error (ekran bulunamadı...)
@@ -727,6 +735,11 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 qrImageView.setVisibility(View.VISIBLE);
 
             });
+        }
+        else{
+            if(playerFragment.isPlaying()){
+                playerFragment.launchPlayer();
+            }
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_disconnected), Toast.LENGTH_SHORT).show();
     }
