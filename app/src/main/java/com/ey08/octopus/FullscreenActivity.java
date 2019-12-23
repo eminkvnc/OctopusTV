@@ -236,7 +236,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         unregisterReceiver(weatherBroadcastReceiver);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(),RestartService.class);
-        //startService(intent);
+//        startService(intent);
     }
 
     private void toggle() {
@@ -313,7 +313,10 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         setFragment(playerFrame, playerFragment);
         setFragment(widgetFrame, widgetFragment);
         Handler handler = new Handler();
-        handler.postDelayed(() -> setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15),300);
+        handler.postDelayed(() -> {
+            setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
+            widgetFragment.setEnableRss(false);
+        },300);
     }
 
     private void initQueryScheduler(){
@@ -711,6 +714,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_connected), Toast.LENGTH_SHORT).show();
+        playerFragment.networkConnected();
     }
 
     @Override
@@ -737,11 +741,12 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             });
         }
         else{
-            if(playerFragment.isPlaying()){
+            if(!playerFragment.isPlaying()){
                 playerFragment.launchPlayer();
             }
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_disconnected), Toast.LENGTH_SHORT).show();
+        playerFragment.networkDisconnected();
     }
 
     boolean doubleBackTab = false;

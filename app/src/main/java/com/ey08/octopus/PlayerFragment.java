@@ -26,10 +26,14 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.squareup.picasso.Picasso;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.util.HashMap;
 
-public class PlayerFragment extends Fragment implements PlaylistListener {
+public class PlayerFragment extends Fragment implements PlaylistListener, NetworkStateListener{
 
     public static final String TAG = "PlayerFragment";
 
@@ -45,6 +49,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
     private Playlist updatedPlaylist;
     private boolean loopInterrupt = false;
     private boolean isPlaylistUpdated = false;
+    private boolean isNetworkConnected = false;
 
     private boolean isPlaying = false;
     private Activity context;
@@ -148,7 +153,11 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
                 previousMedia.setStopTime(System.currentTimeMillis());
                 if(previousMedia.getStartTime() != -1 && previousMedia.getStopTime() != -1){
                     FirebaseHelper firebaseHelper = FirebaseHelper.getInstance();
-                    firebaseHelper.addMediaData(previousMedia);
+                    if(isNetworkConnected){
+                        firebaseHelper.addMediaData(previousMedia);
+                    } else{
+                        queueReport(previousMedia);
+                    }
                 }
             }
             if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
@@ -240,6 +249,46 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         return playlist;
     }
 
+    private void queueReport(MediaData mediaData){
+        SharedPreferences sharedPreferences = context.getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);
+
+        try {
+            JSONObject jo = mediaData.toJson();
+            JSONArray ja;
+            if (sharedPreferences.contains("queue")) {
+                String queueString = sharedPreferences.getString("queue", "");
+                ja = new JSONArray(queueString);
+            } else {
+                ja = new JSONArray();
+            }
+            ja.put(jo);
+            sharedPreferences.edit().putString("queue", ja.toString()).apply();
+        } catch (JSONException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void executeQueueReport(){
+
+        SharedPreferences sharedPreferences = context.getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);
+        try {
+            JSONArray ja;
+            if (sharedPreferences.contains("queue")) {
+                String queueString = sharedPreferences.getString("queue", "");
+                ja = new JSONArray(queueString);
+                FirebaseHelper firebaseHelper = FirebaseHelper.getInstance();
+                for(int i = 0; i < ja.length(); i++){
+                    firebaseHelper.addMediaData(new MediaData(ja.getJSONObject(i)));
+                }
+                sharedPreferences.edit().remove("queue").apply();
+            }
+
+        } catch (JSONException e){
+            e.printStackTrace();
+        }
+
+    }
+
 
     private Long playlistStopTime;
     private Long playlistStartTime;
@@ -261,5 +310,16 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
             playlistLooperHandler.postDelayed(playlistLooperRunnable, playlistRemainingTime);
 
         }
+    }
+
+    @Override
+    public void networkConnected() {
+        isNetworkConnected = true;
+        executeQueueReport();
+    }
+
+    @Override
+    public void networkDisconnected() {
+        isNetworkConnected = false;
     }
 }

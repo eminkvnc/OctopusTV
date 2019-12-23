@@ -27,6 +27,7 @@ public class WidgetFragment extends Fragment {
     public static final int POSITION_RIGHT = 1;
     public static final int POSITION_TOP = 2;
     public static final int POSITION_BOTTOM = 3;
+    public static final int POSITION_NONE = 4;
 
     private LinearLayout widgetLinearLayout;
     private LinearLayout weatherLinearLayout;
@@ -83,7 +84,7 @@ public class WidgetFragment extends Fragment {
         widgetLinearLayout.addView(rssWebView);
         return v;
     }
-    //TODO: Set transparency.
+    //TODO: Set transparency from API.
     public void setWidgetBarOrientation(int orientation, int widthPercentage, int heightPercentage){
         widgetLinearLayout.setOrientation(orientation);
         weatherLinearLayout.setOrientation(orientation);
@@ -112,6 +113,22 @@ public class WidgetFragment extends Fragment {
         weatherLocationTextView.setText(weatherData.get("location"));
         weatherIconImageView.setImageResource(iconsMap.get(weatherData.get("icon")));
 
+    }
+
+    public void setEnableWeather(boolean isEnabled){
+        if(isEnabled){
+            weatherCardView.setVisibility(View.VISIBLE);
+        } else {
+            weatherCardView.setVisibility(View.GONE);
+        }
+    }
+
+    public void setEnableRss(boolean isEnabled){
+        if(isEnabled){
+            rssWebView.setVisibility(View.VISIBLE);
+        } else {
+            rssWebView.setVisibility(View.GONE);
+        }
     }
 
 }

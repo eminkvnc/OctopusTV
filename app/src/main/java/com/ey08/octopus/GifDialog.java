@@ -33,7 +33,7 @@ public class GifDialog extends Dialog {
         textView = findViewById(R.id.gif_text_view);
         imageView = findViewById(R.id.gif_image_view);
         textView.setText(context.getResources().getString(R.string.gif_dialog_content_loading));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(580, 435);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(326, 172);
         params.gravity = Gravity.CENTER;
         imageView.setLayoutParams(params);
         setCancelable(true);
@@ -46,8 +46,8 @@ public class GifDialog extends Dialog {
 
 
         Glide.with(context)
-                .load(R.drawable.octopus)
-                .placeholder(R.drawable.octopus)
+                .load(R.drawable.octopus_white)
+                .placeholder(R.drawable.octopus_white)
                 .centerCrop()
                 .into(new DrawableImageViewTarget(imageView));
     }

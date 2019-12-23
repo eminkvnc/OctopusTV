@@ -1,5 +1,8 @@
 package com.ey08.octopus.API;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class MediaData {
 
     public static final String MEDIA_TYPE_VIDEO = "video";
@@ -17,6 +20,22 @@ public class MediaData {
         this.type = type;
         this.md5 = md5;
         this.time = time;
+    }
+
+
+    public MediaData(JSONObject jo) {
+        try {
+            this.name = jo.getString("name");
+            this.type = jo.getString("type");
+            this.md5 = jo.getString("md5");
+            this.time = jo.getString("time");
+            this.time = jo.getString("time");
+            this.startTime = jo.getLong("startTime");
+            this.stopTime = jo.getLong("stopTime");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
     }
 
 
@@ -68,4 +87,21 @@ public class MediaData {
     public void setStopTime(long stopTime) {
         this.stopTime = stopTime;
     }
+
+    public JSONObject toJson(){
+
+        JSONObject jo = new JSONObject();
+        try {
+            jo.put("name",name);
+            jo.put("type",type);
+            jo.put("md5",md5);
+            jo.put("time",time);
+            jo.put("startTime",startTime);
+            jo.put("stopTime",stopTime);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jo;
+    }
+
 }
