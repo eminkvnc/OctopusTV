@@ -118,7 +118,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private Bitmap qrBitmap;
 
     private boolean isScreenLogOn = false;
-    private boolean isScreenRegistered = true;
+    private boolean isScreenRegistered = false;
     private boolean isQueryServiceRunning = false;
     private boolean isWeatherServiceRunning = false;
 
@@ -188,6 +188,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
         playerFrame = findViewById(R.id.player_frame);
         widgetFrame = findViewById(R.id.widgets_frame);
+        widgetFrame.setVisibility(View.GONE);
         constraintLayout = findViewById(R.id.activity_fullscreen_constraint_layout);
         qrImageView = findViewById(R.id.qr_code_imageView);
         textView = findViewById(R.id.textView);
@@ -217,6 +218,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         if(screenOrientation != -1){
             rotateScreen(screenOrientation);
         }
+        isScreenRegistered = sp.getBoolean("ScreenRegistered",false);
 
         downloader = new Downloader(getApplicationContext(), this);
         reporter = new Reporter();
@@ -466,6 +468,8 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         //process commands
         if(commands != null){
             isScreenRegistered = true;
+            SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
+            sharedPreferences.edit().putBoolean("ScreenRegistered",true).apply();
             if(commands.isEmpty()){
                 File file = getExternalFilesDir("OctopusDownloads");
                 if(file != null && file.list() != null){
@@ -552,7 +556,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                                     runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            widgetFrame.setVisibility(View.INVISIBLE);
+                                            widgetFrame.setVisibility(View.GONE);
                                         }
                                     });
                                 }
@@ -626,7 +630,8 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             // statement for error (ekran bulunamadı...)
             // show qr-code
             isScreenRegistered = false;
-
+            SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
+            sharedPreferences.edit().putBoolean("ScreenRegistered",false).apply();
             int orientation = getResources().getConfiguration().orientation;
             switch(orientation) {
                 case Configuration.ORIENTATION_LANDSCAPE:
@@ -646,6 +651,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             try {
                 QRGEncoder qrgEncoder = new QRGEncoder(screenID, null, QRGContents.Type.TEXT, qrDimention);
                 qrBitmap = qrgEncoder.encodeAsBitmap();
+                Log.d(TAG, "onNewQuery: screen_id = "+screenID);
 
             } catch (WriterException e) {
                 e.printStackTrace();
@@ -714,7 +720,9 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_connected), Toast.LENGTH_SHORT).show();
-        playerFragment.networkConnected();
+        if(playerFragment != null){
+            playerFragment.networkConnected();
+        }
     }
 
     @Override
@@ -741,12 +749,14 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             });
         }
         else{
-            if(!playerFragment.isPlaying()){
+            if(playerFragment != null && !playerFragment.isPlaying()){
                 playerFragment.launchPlayer();
             }
         }
         Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_disconnected), Toast.LENGTH_SHORT).show();
-        playerFragment.networkDisconnected();
+        if(playerFragment != null){
+            playerFragment.networkDisconnected();
+        }
     }
 
     boolean doubleBackTab = false;

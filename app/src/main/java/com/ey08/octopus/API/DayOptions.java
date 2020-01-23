@@ -2,6 +2,11 @@ package com.ey08.octopus.API;
 
 
 public class DayOptions {
+
+    public static final String STATUS_ON = "on";
+    public static final String STATUS_OFF = "off";
+    public static final String STATUS_SCHEDULED = "scheduled";
+
     private String on;
     private String off;
     private String status;
