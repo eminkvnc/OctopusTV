@@ -1,4 +1,4 @@
-package com.ey08.octopus;
+package com.ey08.octopus.view.player;
 
 import android.app.Activity;
 import android.content.Context;
@@ -14,9 +14,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.ey08.octopus.API.MediaData;
-import com.ey08.octopus.API.Playlist;
+import com.ey08.octopus.model.MediaData;
+import com.ey08.octopus.model.Playlist;
 import com.ey08.octopus.API.PlaylistListener;
+import com.ey08.octopus.FirebaseHelper;
+import com.ey08.octopus.NetworkStateListener;
+import com.ey08.octopus.R;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -33,7 +36,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.HashMap;
 
-public class PlayerFragment extends Fragment implements PlaylistListener, NetworkStateListener{
+public class PlayerFragment extends Fragment implements PlaylistListener, NetworkStateListener {
 
     public static final String TAG = "PlayerFragment";
 
@@ -109,14 +112,14 @@ public class PlayerFragment extends Fragment implements PlaylistListener, Networ
         return v;
     }
 
-    void launchPlayer(){
+    public void launchPlayer(){
         if((!updatedPlaylist.isEmpty() || !playlist.isEmpty()) && downloadDir.list() != null){
             isPlaying = true;
             loopPlaylist(0L);
         }
     }
 
-    void stopPlayer(){
+    public void stopPlayer(){
         player.release();
         loopInterrupt = true;
     }
@@ -211,7 +214,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener, Networ
         isPlaylistUpdated = true;
     }
 
-    boolean isPlaying() {
+    public boolean isPlaying() {
         return isPlaying;
     }
 

@@ -2,6 +2,11 @@ package com.ey08.octopus.API;
 
 import android.util.Log;
 
+import com.ey08.octopus.model.CommandData;
+import com.ey08.octopus.model.DayOptions;
+import com.ey08.octopus.model.MediaData;
+import com.ey08.octopus.model.Playlist;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

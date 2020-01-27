@@ -1,9 +1,12 @@
-package com.ey08.octopus.API;
+package com.ey08.octopus.model;
+
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MediaData {
+public class MediaData implements Parcelable {
 
     public static final String MEDIA_TYPE_VIDEO = "video";
     public static final String MEDIA_TYPE_JPG = "image";
@@ -104,4 +107,39 @@ public class MediaData {
         return jo;
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.name);
+        dest.writeString(this.type);
+        dest.writeString(this.md5);
+        dest.writeString(this.time);
+        dest.writeLong(this.startTime);
+        dest.writeLong(this.stopTime);
+    }
+
+    protected MediaData(Parcel in) {
+        this.name = in.readString();
+        this.type = in.readString();
+        this.md5 = in.readString();
+        this.time = in.readString();
+        this.startTime = in.readLong();
+        this.stopTime = in.readLong();
+    }
+
+    public static final Parcelable.Creator<MediaData> CREATOR = new Parcelable.Creator<MediaData>() {
+        @Override
+        public MediaData createFromParcel(Parcel source) {
+            return new MediaData(source);
+        }
+
+        @Override
+        public MediaData[] newArray(int size) {
+            return new MediaData[size];
+        }
+    };
 }

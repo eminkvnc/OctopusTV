@@ -7,7 +7,8 @@ import android.net.wifi.WifiManager;
 import android.util.Log;
 
 import com.ey08.octopus.BuildConfig;
-import com.ey08.octopus.FullscreenActivity;
+import com.ey08.octopus.model.CommandData;
+import com.ey08.octopus.view.fullscreenactivity.FullscreenActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;

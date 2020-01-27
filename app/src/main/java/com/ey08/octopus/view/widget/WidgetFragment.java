@@ -1,4 +1,4 @@
-package com.ey08.octopus;
+package com.ey08.octopus.view.widget;
 
 import android.graphics.Point;
 import android.os.Bundle;
@@ -15,6 +15,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+
+import com.ey08.octopus.R;
 
 import java.util.HashMap;
 
