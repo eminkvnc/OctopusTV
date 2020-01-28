@@ -36,8 +36,9 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.github.rongi.rotate_layout.layout.RotateLayout;
+import com.google.zxing.WriterException;
 import com.tvoctopus.player.API.APIKeys;
-import com.tvoctopus.player.API.DownloadCompleteListener;
 import com.tvoctopus.player.API.Downloader;
 import com.tvoctopus.player.API.JSonParser;
 import com.tvoctopus.player.API.QuerySchedulerService;
@@ -52,13 +53,10 @@ import com.tvoctopus.player.WeatherBroadcastReceiver;
 import com.tvoctopus.player.WeatherListener;
 import com.tvoctopus.player.WeatherService;
 import com.tvoctopus.player.model.CommandData;
-import com.tvoctopus.player.model.MediaData;
 import com.tvoctopus.player.model.Playlist;
 import com.tvoctopus.player.model.StatusFlags;
 import com.tvoctopus.player.view.player.PlayerFragment;
 import com.tvoctopus.player.view.widget.WidgetFragment;
-import com.github.rongi.rotate_layout.layout.RotateLayout;
-import com.google.zxing.WriterException;
 
 import org.json.JSONObject;
 
@@ -86,11 +84,13 @@ import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_270;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_90;
+import static com.tvoctopus.player.API.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
+import static com.tvoctopus.player.API.QuerySchedulerService.ACTION_COMMAND_SYNC;
 import static com.tvoctopus.player.API.QuerySchedulerService.ACTION_SCREEN_REGISTERED;
 import static com.tvoctopus.player.API.QuerySchedulerService.PARAM_SCREEN_REGISTERED;
 import static com.tvoctopus.player.WeatherService.ACTION_WEATHER_QUERY;
 
-public class FullscreenActivity extends AppCompatActivity implements DownloadCompleteListener/*, QueryListener, NetworkStateListener*/, ScreenListener, WeatherListener {
+public class FullscreenActivity extends AppCompatActivity implements ScreenListener, WeatherListener {
 
     public static final String TAG = "FullscreenActivity";
 
@@ -115,9 +115,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private GifDialog gifDialog;
     private Activity activity;
 
-//    private NetworkStateBroadcastReceiver networkStateReceiver;
     private ScreenReciever screenReciever;
-//    private QueryBroadcastReceiver queryBroadcastReceiver;
     private WeatherBroadcastReceiver weatherBroadcastReceiver;
 
     private BroadcastReceiver screenRegisteredReceiver;
@@ -129,6 +127,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     private BroadcastReceiver turnOffTvCommandReceiver;
     private BroadcastReceiver screenShotCommandReceiver;
     private BroadcastReceiver networkStateBroadcastReceiver;
+    private BroadcastReceiver downloadCompleteReceiver;
 
     private Intent querySchedulerService = null;
     private Intent weatherService = null;
@@ -141,11 +140,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
     private String screenID;
     private Bitmap qrBitmap;
-
-    private boolean isScreenRegistered = false;
-    private boolean isNetworkConnected = false;
-    private boolean isQueryServiceRunning = false;
-    private boolean isWeatherServiceRunning = false;
 
     private FullScreenActivityViewModel viewModel;
 
@@ -179,7 +173,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -209,7 +202,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
         viewModel = new ViewModelProvider(this).get(FullScreenActivityViewModel.class);
 
-
         viewModel.getStatusFlags().observe(this, statusFlags -> {
             //Screen not registered cases
             Log.d(TAG, "onChanged: statusFlags: screenRegistered:"+statusFlags.isScreenRegistered()+" networkConnected: "+statusFlags.isNetworkConnected());
@@ -217,12 +209,14 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 generateAndShowQrCode();
                 startServices();
                 if(playerFragment != null){
+
                 }
             }
             if(!statusFlags.isNetworkConnected() && !statusFlags.isScreenRegistered()){
                 showNetworkConnectionMessage();
                 stopServices();
                 if(playerFragment != null){
+
                 }
             }
             //Screen registered cases
@@ -251,9 +245,11 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
         });
 
-//        IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-//        networkStateReceiver = new NetworkStateBroadcastReceiver(this);
-//        registerReceiver(networkStateReceiver, intentFilter);
+        viewModel.getPlaylist().observe(this, mediaData -> {
+            //TODO: Send Broadcast for playlist updated.
+            //  Receive data in PlayerFragment.
+
+        });
 
         IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
         intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
@@ -261,7 +257,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         registerReceiver(screenReciever, intentFilter2);
 
 //        IntentFilter intentFilter3 = new IntentFilter(ACTION_ON_NEW_QUERY);
-//        queryBroadcastReceiver = new QueryBroadcastReceiver(this);
 //        registerReceiver(queryBroadcastReceiver,intentFilter3);
 
         IntentFilter intentFilter4 = new IntentFilter(ACTION_WEATHER_QUERY);
@@ -280,6 +275,39 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             }
         };
 
+        syncCommandReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+                CommandData commandData = intent.getParcelableExtra(QuerySchedulerService.PARAM_COMMAND_DATA);
+                if (commandData != null && !commandData.getPlaylist().isEmpty()) {
+                    Downloader.getInstance(getApplicationContext()).startDownloads(commandData.getPlaylist());
+                    reporter.setDownloadCommand(commandData);
+                    showGif();
+                }
+            }
+
+        };
+
+        downloadCompleteReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                boolean allDownloadsComplete = intent.getBooleanExtra(Downloader.PARAM_DOWNLOAD_COMPLETE_STATUS,false);
+                String fileName = intent.getStringExtra(Downloader.PARAM_DOWNLOAD_COMPLETE_NAME);
+
+                if(allDownloadsComplete){
+                    //TODO: Trigger playlistLiveData. Report download progress status.
+                    reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
+                    Playlist playlist = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
+                    Log.d(TAG, "onReceive: playlistSize: "+playlist.size());
+                    viewModel.getPlaylist().postValue(playlist);
+                    dismissGif();
+                } else {
+                    //TODO: Report download progress status.
+                    reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
+                }
+            }
+        };
     }
 
     @Override
@@ -300,12 +328,9 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         if(screenOrientation != -1){
             rotateScreen(screenOrientation);
         }
-        isScreenRegistered = sp.getBoolean("ScreenRegistered",false);
 
-//        downloader = new Downloader(getApplicationContext(), this);
         reporter = new Reporter();
         checkPermission(getApplicationContext(), this);
-
     }
 
     @Override
@@ -319,12 +344,15 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 //        unregisterReceiver(queryBroadcastReceiver);
         unregisterReceiver(weatherBroadcastReceiver);
 
-        LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(screenRegisteredReceiver);
-//        unregisterReceiver(screenRegisteredReceiver);
-//        unregisterReceiver(screenRegisteredReceiver);
-//        unregisterReceiver(screenRegisteredReceiver);
-//        unregisterReceiver(screenRegisteredReceiver);
-//        unregisterReceiver(screenRegisteredReceiver);
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
+        lbm.unregisterReceiver(screenRegisteredReceiver);
+        lbm.unregisterReceiver(downloadCompleteReceiver);
+        lbm.unregisterReceiver(syncCommandReceiver);
+//        lbm.unregisterReceiver(screenRegisteredReceiver);
+//        lbm.unregisterReceiver(screenRegisteredReceiver);
+//        lbm.unregisterReceiver(screenRegisteredReceiver);
+//        lbm.unregisterReceiver(screenRegisteredReceiver);
+//        lbm.unregisterReceiver(screenRegisteredReceiver);
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(), RestartService.class);
@@ -334,15 +362,13 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     @Override
     protected void onResume() {
         super.onResume();
-
-        LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
-
-//        registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
-//        registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
-//        registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
-
-
-
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
+        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+        lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
+        lbm.registerReceiver(syncCommandReceiver, new IntentFilter(ACTION_COMMAND_SYNC));
+//        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+//        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+//        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
     }
 
     private void toggle() {
@@ -554,7 +580,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         }
     }
 
-    //This method only triggers when network connection is available.
 
 //    @Override
     public void onNewQuery(JSONObject result) {
@@ -581,30 +606,27 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                     switch (command.getCommand()){
                         case KEY_COMMANDS_SYNC:
                             // Check if media already downloaded
-                            //TODO: Check playlist in sync receiver and LiveData.(PlayerFragment)
-                            //TODO: Move download management operations in Downloader.
-                            //  Trigger downloadComplete and playlistUpdated receiver in Downloader.
-                            SharedPreferences sp = getSharedPreferences(SHARED_PREF_PLAYLIST,Context.MODE_PRIVATE);
-                            sp.edit().clear().apply();
-                            File downloadDir = getExternalFilesDir(Downloader.DOWNLOAD_DIR);
-                            int i = 0;
-                            for (MediaData media : command.getPlaylist()){
-                                File downloadedFile = new File(downloadDir,media.getName());
-                                if(!downloadedFile.exists()){
-//                                    downloader.startDownload(media.getName());
-                                    Intent downloadIntent = new Intent(FullscreenActivity.this, Downloader.class);
-                                    downloadIntent.putExtra(Downloader.PARAM_FILE_NAME, media.getName());
-                                    startService(downloadIntent);
-                                    reporter.setDownloadCommand(command);
-                                }
-                                //TODO: Use SharedPreferencesLiveData to apply changes.
-                                sp.edit().putString(String.valueOf(i), media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime()).apply();
-                                i++;
-                            }
+
+//                            SharedPreferences sp = getSharedPreferences(SHARED_PREF_PLAYLIST,Context.MODE_PRIVATE);
+//                            sp.edit().clear().apply();
+//                            File downloadDir = getExternalFilesDir(Downloader.DOWNLOAD_DIR);
+//                            int i = 0;
+//                            for (MediaData media : command.getPlaylist()){
+//                                File downloadedFile = new File(downloadDir,media.getName());
+//                                if(!downloadedFile.exists()){
+////                                    downloader.startDownload(media.getName());
+//                                    Intent downloadIntent = new Intent(FullscreenActivity.this, Downloader.class);
+//                                    downloadIntent.putExtra(Downloader.PARAM_FILE_NAME, media.getName());
+//                                    startService(downloadIntent);
+//                                    reporter.setDownloadCommand(command);
+//                                }
+//                                sp.edit().putString(String.valueOf(i), media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime()).apply();
+//                                i++;
+//                            }
                             // change local playlist object if playlist updated
-                            if(playlist == null || !playlist.equals(command.getPlaylist())){
-                                playlist = command.getPlaylist();
-                            }
+//                            if(playlist == null || !playlist.equals(command.getPlaylist())){
+//                                playlist = command.getPlaylist();
+//                            }
                             // apply orientation
                             //TODO: Apply configurations in sync receiver.(FullScreenActivity)
                             String orientationString = (String)command.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
@@ -807,6 +829,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             Log.d(TAG, "stopServices");
             stopService(querySchedulerService);
             stopService(weatherService);
+            Downloader.getInstance(getApplicationContext()).stop();
         }
 
     }
@@ -816,7 +839,24 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
             Log.d(TAG, "startServices");
             startService(querySchedulerService);
             startService(weatherService);
+            Downloader.getInstance(getApplicationContext());
         }
+    }
+
+    private void showGif(){
+        runOnUiThread(() -> {
+            if(!gifDialog.isShowing()){
+                gifDialog.show();
+            }
+        });
+    }
+
+    private void dismissGif(){
+        runOnUiThread(() -> {
+            if(gifDialog.isShowing()){
+                gifDialog.dismiss();
+            }
+        });
     }
 
 
@@ -827,8 +867,8 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         widgetFragment.updateWeather(new JSonParser().parseWeatherData(result));
     }
 
-    //TODO: Implement download receiver and LiveData.
-    @Override
+    //TODO: Remove unnecessary code.
+
     public void downloadComplete(boolean isAllDownloadsComplete) {
         if(isAllDownloadsComplete){
             File file = new File(Downloader.DOWNLOAD_DIR);
@@ -855,7 +895,6 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
     }
 
-    @Override
     public void downloadStart() {
         isDownloading = true;
         runOnUiThread(() -> {

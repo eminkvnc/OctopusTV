@@ -217,6 +217,8 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         // TODO: Report media data to server.
     }
 
+
+    //TODO: Update OctopusDownloads dir with temp_OctopusDownloads dir when current media finished.
     @Override
     public void playlistUpdated(Playlist playlist){
         // Update SharedPreferences when playlist updated

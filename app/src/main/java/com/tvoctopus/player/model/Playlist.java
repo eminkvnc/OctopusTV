@@ -65,7 +65,7 @@ public class Playlist extends ArrayList<MediaData> implements Parcelable {
     public Playlist() {
     }
 
-    protected Playlist(Parcel in) {
+    public Playlist(Parcel in) {
         this.index = in.readInt();
     }
 

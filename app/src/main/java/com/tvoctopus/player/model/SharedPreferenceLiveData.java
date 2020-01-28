@@ -28,16 +28,18 @@ public abstract class SharedPreferenceLiveData<T> extends MutableLiveData<T> {
     abstract T getValueFromPreferences(String key, T defValue);
 
 
+    public abstract void setAndPostValue(T value);
+
     @Override
     public void postValue(T value){
         super.postValue(value);
-        sharedPrefs.edit().putBoolean(key, (Boolean) value).apply();
+        setAndPostValue(value);
     }
 
     @Override
     public void setValue(T value){
         super.setValue(value);
-        sharedPrefs.edit().putBoolean(key, (Boolean) value).apply();
+        setAndPostValue(value);
     }
 
     @Override
