@@ -55,10 +55,10 @@
             </intent-filter>
         </receiver>
 
-        <service android:name="com.tvoctopus.player.RestartService" />
-        <service android:name="com.tvoctopus.player.API.QuerySchedulerService" />
-        <service android:name="com.tvoctopus.player.WeatherService" />
-        <service android:name="com.tvoctopus.player.API.Downloader" />
+        <service android:name="com.tvoctopus.player.services.RestartService" />
+        <service android:name="com.tvoctopus.player.services.QuerySchedulerService" />
+        <service android:name="com.tvoctopus.player.services.WeatherService" />
+        <service android:name="com.tvoctopus.player.services.Downloader" />
 
         <meta-data
             android:name="preloaded_fonts"

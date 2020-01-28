@@ -1,4 +1,4 @@
-package com.tvoctopus.player;
+package com.tvoctopus.player.services;
 
 import android.app.Service;
 import android.content.Intent;

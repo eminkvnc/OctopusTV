@@ -1,4 +1,4 @@
-package com.tvoctopus.player.API;
+package com.tvoctopus.player.services;
 
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
@@ -150,9 +150,6 @@ public class Downloader{
 
             }
         }
-
     }
-
-
 }
 

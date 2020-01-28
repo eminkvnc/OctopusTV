@@ -1,4 +1,4 @@
-package com.tvoctopus.player.API;
+package com.tvoctopus.player.services;
 
 import android.app.Service;
 import android.content.Intent;
@@ -7,6 +7,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.tvoctopus.player.API.JSonParser;
 import com.tvoctopus.player.model.CommandData;
 import org.json.JSONException;
 import org.json.JSONObject;

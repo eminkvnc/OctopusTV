@@ -1,4 +1,4 @@
-package com.tvoctopus.player.API;
+package com.tvoctopus.player.services;
 
 import android.content.Context;
 import android.content.SharedPreferences;

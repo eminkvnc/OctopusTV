@@ -320,6 +320,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
     private Long playlistStartTime;
     private Long playlistRemainingTime;
 
+    //TODO: Report mediaData to server when media paused and played again.
     @Override
     public void playlistWaited(boolean isWaiting) {
         if(isWaiting){
