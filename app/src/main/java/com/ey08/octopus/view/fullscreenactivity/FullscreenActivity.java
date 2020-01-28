@@ -36,21 +36,23 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.ey08.octopus.API.APIKeys;
 import com.ey08.octopus.API.DownloadCompleteListener;
 import com.ey08.octopus.API.Downloader;
 import com.ey08.octopus.API.JSonParser;
 import com.ey08.octopus.API.QuerySchedulerService;
 import com.ey08.octopus.API.Reporter;
 import com.ey08.octopus.GifDialog;
-import com.ey08.octopus.QueryBroadcastReceiver;
 import com.ey08.octopus.R;
 import com.ey08.octopus.RestartService;
 import com.ey08.octopus.ScreenListener;
 import com.ey08.octopus.ScreenReciever;
+import com.ey08.octopus.ShellExecutor;
 import com.ey08.octopus.WeatherBroadcastReceiver;
 import com.ey08.octopus.WeatherListener;
 import com.ey08.octopus.WeatherService;
 import com.ey08.octopus.model.CommandData;
+import com.ey08.octopus.model.MediaData;
 import com.ey08.octopus.model.Playlist;
 import com.ey08.octopus.model.StatusFlags;
 import com.ey08.octopus.view.player.PlayerFragment;
@@ -64,11 +66,22 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.UUID;
 
 import androidmads.library.qrgenearator.QRGContents;
 import androidmads.library.qrgenearator.QRGEncoder;
 
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_REPORT;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_RESET;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_SCREENSHOT;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_SYNC;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
+import static com.ey08.octopus.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
+import static com.ey08.octopus.API.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.ey08.octopus.API.APIKeys.KEY_VALUES_ROTATION_270;
@@ -104,7 +117,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
 //    private NetworkStateBroadcastReceiver networkStateReceiver;
     private ScreenReciever screenReciever;
-    private QueryBroadcastReceiver queryBroadcastReceiver;
+//    private QueryBroadcastReceiver queryBroadcastReceiver;
     private WeatherBroadcastReceiver weatherBroadcastReceiver;
 
     private BroadcastReceiver screenRegisteredReceiver;
@@ -122,14 +135,13 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
 
     private ArrayList<CommandData> commands;
     private Playlist playlist;
-    private Downloader downloader;
+//    private Downloader downloader;
     private Reporter reporter;
     private boolean isDownloading = false;
 
     private String screenID;
     private Bitmap qrBitmap;
 
-    private boolean isScreenLogOn = false;
     private boolean isScreenRegistered = false;
     private boolean isNetworkConnected = false;
     private boolean isQueryServiceRunning = false;
@@ -205,32 +217,37 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
                 generateAndShowQrCode();
                 startServices();
                 if(playerFragment != null){
-                    playerFragment.networkConnected();
                 }
             }
             if(!statusFlags.isNetworkConnected() && !statusFlags.isScreenRegistered()){
                 showNetworkConnectionMessage();
                 stopServices();
                 if(playerFragment != null){
-                    playerFragment.networkDisconnected();
                 }
             }
             //Screen registered cases
             if(statusFlags.isNetworkConnected() && statusFlags.isScreenRegistered()){
                 dismissMessages();
                 startServices();
+
+                //TODO: Implement apply configurations.
                 if(playerFragment != null){
-                    playerFragment.networkConnected();
+                    if(!playerFragment.isPlaying()){
+                        playerFragment.launchPlayer();
+                    }
                 }
-                //TODO: Check caches and launch player if it is not playing.
+
             }
             if(!statusFlags.isNetworkConnected() && statusFlags.isScreenRegistered()){
                 dismissMessages();
                 stopServices();
+
+                //TODO: Implement apply configurations.
                 if(playerFragment != null){
-                    playerFragment.networkDisconnected();
+                    if(!playerFragment.isPlaying()){
+                        playerFragment.launchPlayer();
+                    }
                 }
-                //TODO: Check caches and launch player if it is not playing.
             }
         });
 
@@ -285,7 +302,7 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         }
         isScreenRegistered = sp.getBoolean("ScreenRegistered",false);
 
-        downloader = new Downloader(getApplicationContext(), this);
+//        downloader = new Downloader(getApplicationContext(), this);
         reporter = new Reporter();
         checkPermission(getApplicationContext(), this);
 
@@ -540,193 +557,196 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     //This method only triggers when network connection is available.
 
 //    @Override
-//    public void onNewQuery(JSONObject result) {
-//        runOnUiThread(() -> {
-//            if(isScreenLogOn){
-//                textView.setText(result.toString());
-//            }
-//        });
-//        Log.d("QuerySchedulerService", "onNewQuery: "+result);
-//        //PARSE COMMANDS HERE
-//        commands = new JSonParser().parseCommands(result);
-//        //process commands
-//        if(commands != null){
-//
+    public void onNewQuery(JSONObject result) {
+
+        Log.d("QuerySchedulerService", "onNewQuery: "+result);
+        //PARSE COMMANDS HERE
+        commands = new JSonParser().parseCommands(result);
+        //process commands
+        if(commands != null){
+
 //            isScreenRegistered = true;
 //            SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
 //            sharedPreferences.edit().putBoolean("ScreenRegistered",true).apply();
-//            if(commands.isEmpty()){
-//                File file = getExternalFilesDir("OctopusDownloads");
-//                if(file != null && file.list() != null){
-//                    if(!playerFragment.isPlaying()){
-//                        playerFragment.launchPlayer();
-//                    }
-//                }
-//            }
-//            else{
-//                for(CommandData command : commands){
-//                    switch (command.getCommand()){
-//                        case KEY_COMMANDS_SYNC:
-//                            // Check if media already downloaded
-//                            SharedPreferences sp = getSharedPreferences(SHARED_PREF_PLAYLIST,Context.MODE_PRIVATE);
-//                            sp.edit().clear().apply();
-//                            File downloadDir = getExternalFilesDir(Downloader.DOWNLOAD_DIR);
-//                            int i = 0;
-//                            for (MediaData media : command.getPlaylist()){
-//                                File downloadedFile = new File(downloadDir,media.getName());
-//                                if(!downloadedFile.exists()){
+            if(commands.isEmpty()){
+                File file = getExternalFilesDir("OctopusDownloads");
+                if(file != null && file.list() != null){
+                    if(!playerFragment.isPlaying()){
+                        playerFragment.launchPlayer();
+                    }
+                }
+            }
+            else{
+                for(CommandData command : commands){
+                    switch (command.getCommand()){
+                        case KEY_COMMANDS_SYNC:
+                            // Check if media already downloaded
+                            //TODO: Check playlist in sync receiver and LiveData.(PlayerFragment)
+                            //TODO: Move download management operations in Downloader.
+                            //  Trigger downloadComplete and playlistUpdated receiver in Downloader.
+                            SharedPreferences sp = getSharedPreferences(SHARED_PREF_PLAYLIST,Context.MODE_PRIVATE);
+                            sp.edit().clear().apply();
+                            File downloadDir = getExternalFilesDir(Downloader.DOWNLOAD_DIR);
+                            int i = 0;
+                            for (MediaData media : command.getPlaylist()){
+                                File downloadedFile = new File(downloadDir,media.getName());
+                                if(!downloadedFile.exists()){
 //                                    downloader.startDownload(media.getName());
-//                                    reporter.setDownloadCommand(command);
-//                                }
-//                                sp.edit().putString(String.valueOf(i), media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime()).apply();
-//                                i++;
-//                            }
-//                            // change local playlist object if playlist updated
-//                            if(playlist == null || !playlist.equals(command.getPlaylist())){
-//                                playlist = command.getPlaylist();
-//                            }
-//                            // apply orientation
-//                            String orientationString = (String)command.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
-//                            if(orientationString != null){
-//                                int orientation = Integer.parseInt(orientationString);
-//                                SharedPreferences sp2 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,Context.MODE_PRIVATE);
-//                                int screenOrientation = sp2.getInt("ScreenOrientation",-1);
-//                                if(screenOrientation != orientation){
-//                                    sp2.edit().putInt("ScreenOrientation",orientation).apply();
-//                                }
-//                            }
-//
-//                            // if there are no downloads update ui with new playlist
-//                            if(!isDownloading){
-//                                playerFragment.playlistUpdated(playlist);
-//                                SharedPreferences sp3 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
-//                                int screenOrientation = sp3.getInt("ScreenOrientation",-1);
-//                                rotateScreen(screenOrientation);
-//                                if(!playerFragment.isPlaying()){
-//                                    playerFragment.launchPlayer();
-//                                }
-//                            }
-//
-//                            //TODO: Handle widget bar position, width and height when API results available for widgets. (temporarily used wifi-SSID and overscan metadata fields.)
-//                            //TODO: Cache widget data for offline usage.
-//                            if(command.getMetaData() != null){
-//                                HashMap<String, Object> hashMap = command.getMetaData();
-//                                String url = "https://api.openweathermap.org/data/2.5/weather?q="+hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
-//                                url = url+"&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
-//                                weatherService.putExtra("weatherURL",url);
-//                                startService(weatherService);
-//                                Log.d(TAG, "onNewQuery: top: "+hashMap.get(KEY_PARAMS_OVERSCAN_TOP));
-//                                Log.d(TAG, "onNewQuery: bottom: "+hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM));
-//                                Log.d(TAG, "onNewQuery: left: "+hashMap.get(KEY_PARAMS_OVERSCAN_LEFT));
-//                                Log.d(TAG, "onNewQuery: right: "+hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT));
-//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
-//                                    setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15);
-//                                    widgetFrame.setVisibility(View.VISIBLE);
-//                                }
-//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
-//                                    setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15);
-//                                    widgetFrame.setVisibility(View.VISIBLE);
-//                                }
-//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
-//                                    setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15);
-//                                    widgetFrame.setVisibility(View.VISIBLE);
-//                                }
-//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
-//                                    setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
-//                                    widgetFrame.setVisibility(View.VISIBLE);
-//                                }
-//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("0")&&
-//                                        hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("0")&&
-//                                        hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("0")&&
-//                                        hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("0")){
-//                                    runOnUiThread(new Runnable() {
-//                                        @Override
-//                                        public void run() {
-//                                            widgetFrame.setVisibility(View.GONE);
-//                                        }
-//                                    });
-//                                }
-//                            }
-//
-//
-//                            break;
-//
-//                        case KEY_COMMANDS_REPORT:
-//                            //process report command
-//                            reporter.reportDeviceStatus(getApplicationContext());
-//                            break;
-//
-//                        case KEY_COMMANDS_RESET:
-//                            reporter.reportCommandStatus(command,"succeeded");
-//                            clearApplicationData();
-//                            finishAffinity();
-//                            break;
-//
-//                        case KEY_COMMANDS_TURN_ON_TV:
-//                            //TODO: Implement cec commands.
-//                            File file1 = new File("/sys/class/cec/cmd");
-//                            if(file1.exists()){
-//                                //String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
-//                                //ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand).asSuperUser();
-//                                //shellExecutorOn.start();
-//                                String turnOnShellCommand = "input keyevent 26";
-//                                ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand);
-//                                shellExecutorOn.start();
-//                            } else{
-//                                if(!playerFragment.isPlaying()){
-//                                    playerFragment.launchPlayer();
-//                                }
-//                            }
-//                            break;
-//
-//                        case KEY_COMMANDS_TURN_OFF_TV:
-//                            //TODO: Implement cec commands.
-//                            File file2 = new File("/sys/class/cec/cmd");
-//                            if(file2.exists()) {
-//                                //String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
-//                                //ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand).asSuperUser();
-//                                //shellExecutorOn.start();
-//                                String turnOffShellCommand = "input keyevent 26";
-//                                ShellExecutor shellExecutorOff = new ShellExecutor(turnOffShellCommand);
-//                                shellExecutorOff.start();
-//                            } else{
-//                                if(playerFragment.isPlaying()){
-//                                    // if cec cmd not found we can stop playing media from player fragment
-//                                    //TODO: Pause player from PlayerFragment.
-//                                }
-//                            }
-//                            break;
-//
-//                        case KEY_COMMANDS_SCREENSHOT:
-//                            //TODO: Implement sending screenshot.
-//
-//                            break;
-//
-//                        default:
-//                            // do something
-//                            break;
-//                    }
-//                }
-//                File file = getExternalFilesDir("OctopusDownloads");
-//                if(file != null && file.list() != null && !isDownloading){
-//                    if(!playerFragment.isPlaying()){
-//                        playerFragment.launchPlayer();
-//                    }
-//                }
-//            }
+                                    Intent downloadIntent = new Intent(FullscreenActivity.this, Downloader.class);
+                                    downloadIntent.putExtra(Downloader.PARAM_FILE_NAME, media.getName());
+                                    startService(downloadIntent);
+                                    reporter.setDownloadCommand(command);
+                                }
+                                //TODO: Use SharedPreferencesLiveData to apply changes.
+                                sp.edit().putString(String.valueOf(i), media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime()).apply();
+                                i++;
+                            }
+                            // change local playlist object if playlist updated
+                            if(playlist == null || !playlist.equals(command.getPlaylist())){
+                                playlist = command.getPlaylist();
+                            }
+                            // apply orientation
+                            //TODO: Apply configurations in sync receiver.(FullScreenActivity)
+                            String orientationString = (String)command.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
+                            if(orientationString != null){
+                                int orientation = Integer.parseInt(orientationString);
+                                SharedPreferences sp2 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,Context.MODE_PRIVATE);
+                                int screenOrientation = sp2.getInt("ScreenOrientation",-1);
+                                if(screenOrientation != orientation){
+                                    sp2.edit().putInt("ScreenOrientation",orientation).apply();
+                                }
+                            }
+
+                            // if there are no downloads update ui with new playlist
+                            if(!isDownloading){
+                                playerFragment.playlistUpdated(playlist);
+                                SharedPreferences sp3 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
+                                int screenOrientation = sp3.getInt("ScreenOrientation",-1);
+                                rotateScreen(screenOrientation);
+                                if(!playerFragment.isPlaying()){
+                                    playerFragment.launchPlayer();
+                                }
+                            }
+
+                            //TODO: Handle widget bar position, width and height when API results available for widgets. (temporarily used wifi-SSID and overscan metadata fields.)
+                            //  Cache widget data for offline usage.
+                            if(command.getMetaData() != null){
+                                HashMap<String, Object> hashMap = command.getMetaData();
+                                String url = "https://api.openweathermap.org/data/2.5/weather?q="+hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
+                                url = url+"&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+                                weatherService.putExtra("weatherURL",url);
+                                startService(weatherService);
+                                Log.d(TAG, "onNewQuery: top: "+hashMap.get(KEY_PARAMS_OVERSCAN_TOP));
+                                Log.d(TAG, "onNewQuery: bottom: "+hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM));
+                                Log.d(TAG, "onNewQuery: left: "+hashMap.get(KEY_PARAMS_OVERSCAN_LEFT));
+                                Log.d(TAG, "onNewQuery: right: "+hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT));
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
+                                    setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
+                                    widgetFrame.setVisibility(View.VISIBLE);
+                                }
+                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("0")&&
+                                        hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("0")&&
+                                        hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("0")&&
+                                        hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("0")){
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            widgetFrame.setVisibility(View.GONE);
+                                        }
+                                    });
+                                }
+                            }
+
+                            break;
+
+                        case KEY_COMMANDS_REPORT:
+                            //process report command
+                            reporter.reportDeviceStatus(getApplicationContext());
+                            break;
+
+                        case KEY_COMMANDS_RESET:
+                            reporter.reportCommandStatus(command,"succeeded");
+                            clearApplicationData();
+                            finishAffinity();
+                            break;
+
+                        case KEY_COMMANDS_TURN_ON_TV:
+
+                            File file1 = new File("/sys/class/cec/cmd");
+                            if(file1.exists()){
+                                //String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
+                                //ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand).asSuperUser();
+                                //shellExecutorOn.start();
+                                String turnOnShellCommand = "input keyevent 26";
+                                ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand);
+                                shellExecutorOn.start();
+                            } else{
+                                if(!playerFragment.isPlaying()){
+                                    playerFragment.launchPlayer();
+                                }
+                            }
+                            break;
+
+                        case KEY_COMMANDS_TURN_OFF_TV:
+
+                            File file2 = new File("/sys/class/cec/cmd");
+                            if(file2.exists()) {
+                                //String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
+                                //ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand).asSuperUser();
+                                //shellExecutorOn.start();
+                                String turnOffShellCommand = "input keyevent 26";
+                                ShellExecutor shellExecutorOff = new ShellExecutor(turnOffShellCommand);
+                                shellExecutorOff.start();
+                            } else{
+                                if(playerFragment.isPlaying()){
+                                    // if cec cmd not found we can stop playing media from player fragment
+
+                                }
+                            }
+                            break;
+
+                        case KEY_COMMANDS_SCREENSHOT:
+                            //TODO: Implement sending screenshot.
+
+                            break;
+
+                        default:
+                            // do something
+                            break;
+                    }
+                }
+                File file = getExternalFilesDir("OctopusDownloads");
+                if(file != null && file.list() != null && !isDownloading){
+                    if(!playerFragment.isPlaying()){
+                        playerFragment.launchPlayer();
+                    }
+                }
+            }
 //            textView.setVisibility(View.GONE);
 //            qrImageView.setVisibility(View.GONE);
-//
-//        }else {
-//            // statement for error (ekran bulunamadı...)
-//            // show qr-code
+
+        }else {
+            // statement for error (ekran bulunamadı...)
+            // show qr-code
 //            isScreenRegistered = false;
 //            SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
 //            sharedPreferences.edit().putBoolean("ScreenRegistered",false).apply();
 //
 //            generateAndShowQrCode();
-//        }
-//    }
+        }
+    }
 
     public void generateAndShowQrCode(){
 
@@ -800,13 +820,14 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
     }
 
 
-
+    //TODO: Implement weather receiver and LiveData.
     @Override
     public void weatherUpdated(JSONObject result) {
         Log.d(TAG, "weatherUpdated: "+result.toString());
         widgetFragment.updateWeather(new JSonParser().parseWeatherData(result));
     }
 
+    //TODO: Implement download receiver and LiveData.
     @Override
     public void downloadComplete(boolean isAllDownloadsComplete) {
         if(isAllDownloadsComplete){
@@ -844,57 +865,8 @@ public class FullscreenActivity extends AppCompatActivity implements DownloadCom
         });
 
     }
-    int qrDimention = 0;
-//    @Override
-//    public void networkConnected() {
-//        //TODO: Clear unnecessary codes which implemented in Receivers and Observers.
-//        if(querySchedulerService != null){
-//            if(!isQueryServiceRunning){
-//                startService(querySchedulerService);
-//                isQueryServiceRunning = true;
-//            }
-//        }
-//        Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_connected), Toast.LENGTH_SHORT).show();
-//        if(playerFragment != null){
-//            playerFragment.networkConnected();
-//        }
-//    }
 
-//    @Override
-//    public void networkDisconnected() {
-//
-//        //TODO: Clear unnecessary codes which implemented in Receivers and Observers.
-//        if(querySchedulerService != null){
-//            if(isQueryServiceRunning){
-//                stopService(querySchedulerService);
-//                isQueryServiceRunning = false;
-//            }
-//        }
-//        if(weatherService != null){
-//            if(isWeatherServiceRunning){
-//                stopService(weatherService);
-//                isWeatherServiceRunning = false;
-//            }
-//        }
-//        if(!isScreenRegistered){
-//            runOnUiThread(() -> {
-//                textView.setText(getResources().getString(R.string.fullscreen_activity_connect_network_textview));
-//                qrImageView.setImageResource(R.drawable.ic_octopus_logo);
-//                textView.setVisibility(View.VISIBLE);
-//                qrImageView.setVisibility(View.VISIBLE);
-//
-//            });
-//        }
-//        else{
-//            if(playerFragment != null && !playerFragment.isPlaying()){
-//                playerFragment.launchPlayer();
-//            }
-//        }
-//        Toast.makeText(activity, getResources().getString(R.string.fullscreen_activity_network_disconnected), Toast.LENGTH_SHORT).show();
-//        if(playerFragment != null){
-//            playerFragment.networkDisconnected();
-//        }
-//    }
+    int qrDimention = 0;
 
     boolean doubleBackTab = false;
 

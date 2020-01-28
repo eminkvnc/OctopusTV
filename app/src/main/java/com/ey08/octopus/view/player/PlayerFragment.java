@@ -13,13 +13,14 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
-import com.ey08.octopus.model.MediaData;
-import com.ey08.octopus.model.Playlist;
 import com.ey08.octopus.API.PlaylistListener;
 import com.ey08.octopus.FirebaseHelper;
-import com.ey08.octopus.NetworkStateListener;
 import com.ey08.octopus.R;
+import com.ey08.octopus.model.MediaData;
+import com.ey08.octopus.model.Playlist;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -36,7 +37,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.HashMap;
 
-public class PlayerFragment extends Fragment implements PlaylistListener, NetworkStateListener {
+public class PlayerFragment extends Fragment implements PlaylistListener {
 
     public static final String TAG = "PlayerFragment";
 
@@ -62,6 +63,8 @@ public class PlayerFragment extends Fragment implements PlaylistListener, Networ
     private Handler playlistLooperHandler = null;
     private Runnable playlistLooperRunnable = null;
 
+    private PlayerFragmentViewModel playerFragmentViewModel;
+
     public PlayerFragment() {
 
     }
@@ -86,6 +89,22 @@ public class PlayerFragment extends Fragment implements PlaylistListener, Networ
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    }
+
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+
+        playerFragmentViewModel = new ViewModelProvider(this).get(PlayerFragmentViewModel.class);
+
+        playerFragmentViewModel.getNetworkConnected().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                isNetworkConnected = aBoolean;
+            }
+        });
+
     }
 
     @Nullable
@@ -155,6 +174,8 @@ public class PlayerFragment extends Fragment implements PlaylistListener, Networ
             if(previousMedia != null){
                 previousMedia.setStopTime(System.currentTimeMillis());
                 if(previousMedia.getStartTime() != -1 && previousMedia.getStopTime() != -1){
+                    //TODO: Implement network connection check in firebase service. Don't use network status in PlayerFragment.
+                    //
                     FirebaseHelper firebaseHelper = FirebaseHelper.getInstance();
                     if(isNetworkConnected){
                         firebaseHelper.addMediaData(previousMedia);
@@ -315,14 +336,4 @@ public class PlayerFragment extends Fragment implements PlaylistListener, Networ
         }
     }
 
-    @Override
-    public void networkConnected() {
-        isNetworkConnected = true;
-        executeQueueReport();
-    }
-
-    @Override
-    public void networkDisconnected() {
-        isNetworkConnected = false;
-    }
 }

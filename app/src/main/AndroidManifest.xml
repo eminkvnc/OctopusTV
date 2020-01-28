@@ -58,6 +58,7 @@
         <service android:name=".RestartService" />
         <service android:name=".API.QuerySchedulerService" />
         <service android:name=".WeatherService" />
+        <service android:name=".API.Downloader" />
 
         <meta-data
             android:name="preloaded_fonts"
