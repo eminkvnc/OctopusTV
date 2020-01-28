@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ey08.octopus">
+    package="com.tvoctopus.player">
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -18,7 +18,7 @@
         android:required="false" />
 
     <application
-        android:name=".OctopusApplication"
+        android:name="com.tvoctopus.player.OctopusApplication"
         android:allowBackup="true"
         android:banner="@drawable/ic_octopus_logo"
         android:icon="@mipmap/ic_launcher"
@@ -29,7 +29,7 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".view.fullscreenactivity.FullscreenActivity"
+            android:name="com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme">
@@ -43,7 +43,7 @@
         </activity>
 
         <receiver
-            android:name=".BootStartReceiver"
+            android:name="com.tvoctopus.player.BootStartReceiver"
             android:enabled="true"
             android:label="BootStartReceiever"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
@@ -55,10 +55,10 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".RestartService" />
-        <service android:name=".API.QuerySchedulerService" />
-        <service android:name=".WeatherService" />
-        <service android:name=".API.Downloader" />
+        <service android:name="com.tvoctopus.player.RestartService" />
+        <service android:name="com.tvoctopus.player.API.QuerySchedulerService" />
+        <service android:name="com.tvoctopus.player.WeatherService" />
+        <service android:name="com.tvoctopus.player.API.Downloader" />
 
         <meta-data
             android:name="preloaded_fonts"
