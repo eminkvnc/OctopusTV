@@ -42,6 +42,9 @@ public abstract class SharedPreferenceLiveData<T> extends MutableLiveData<T> {
         setAndPostValue(value);
     }
 
+
+
+
     @Override
     protected void onActive() {
         super.onActive();

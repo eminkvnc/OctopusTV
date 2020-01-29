@@ -27,6 +27,12 @@ public class WeatherService extends Service {
     private final int SCHEDULE_DELAY = 300;
 
     public static final String ACTION_WEATHER_QUERY = "WeatherQuery";
+    public static final String WEATHER_CITY_KEY = "WEATHER_CITY_KEY";
+
+
+    private static final String urlP1 = "https://api.openweathermap.org/data/2.5/weather?q=";
+    private static final String urlP2 = "&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+
 
     private URL url;
     private String result;
@@ -47,7 +53,11 @@ public class WeatherService extends Service {
             }
             timer = new Timer();
             try {
-                url = new URL(intent.getStringExtra("weatherURL"));
+                String city = intent.getStringExtra(WEATHER_CITY_KEY);
+                if(city == null){
+                    city = "istanbul";
+                }
+                url = new URL(urlP1+city+urlP2);
                 weatherTask = new WeatherTask();
                 timer.schedule(weatherTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
             } catch (MalformedURLException e) {
@@ -61,8 +71,12 @@ public class WeatherService extends Service {
     public void onDestroy() {
         super.onDestroy();
         isStarted = false;
-        weatherTask.cancel();
-        timer.cancel();
+        if(weatherTask != null){
+            weatherTask.cancel();
+        }
+        if(timer != null){
+            timer.cancel();
+        }
     }
 
     public boolean isStarted() {

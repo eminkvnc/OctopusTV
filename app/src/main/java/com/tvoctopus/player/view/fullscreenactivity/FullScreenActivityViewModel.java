@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.tvoctopus.player.model.DataRepository;
 import com.tvoctopus.player.model.Playlist;
+import com.tvoctopus.player.model.ScreenConfig;
 import com.tvoctopus.player.model.StatusFlags;
 import com.tvoctopus.player.model.StatusFlagsLiveData;
 
@@ -39,6 +40,24 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
 
     public MutableLiveData<Playlist> getPlaylist(){
         return dataRepository.getPlaylist();
+    }
+
+
+
+    public MutableLiveData<String> getScreenId(){
+        return dataRepository.getScreenId();
+    }
+
+    public String getScreenIdValue(){
+        return dataRepository.getScreenIdValue();
+    }
+
+    public int getScreenOrientationValue(){
+        return dataRepository.getScreenOrientationValue();
+    }
+
+    public ScreenConfig getConfig(){
+        return dataRepository.getScreenConfig();
     }
 
 

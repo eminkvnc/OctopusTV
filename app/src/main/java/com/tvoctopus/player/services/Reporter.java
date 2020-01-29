@@ -8,7 +8,6 @@ import android.util.Log;
 
 import com.tvoctopus.player.BuildConfig;
 import com.tvoctopus.player.model.CommandData;
-import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,6 +29,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 
 import static android.content.Context.MODE_PRIVATE;
+import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
 
 public class Reporter {
 
@@ -92,7 +92,7 @@ public class Reporter {
             try {
                 ipAddress = getIPAddress(true);
                 macAddress = getMacAddress();
-                SharedPreferences sharedPreferences = context.getSharedPreferences(FullscreenActivity.SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
+                SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
                 screenID = sharedPreferences.getString("screenID",null);
                 playerVersion = BuildConfig.VERSION_NAME;
                 WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService (Context.WIFI_SERVICE);

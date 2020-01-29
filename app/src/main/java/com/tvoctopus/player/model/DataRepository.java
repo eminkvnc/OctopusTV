@@ -12,9 +12,17 @@ import java.util.Set;
 public class DataRepository {
 
     public static final String SHARED_PREF_OCTOPUS_DATA = "OctopusData";
+    public static final String SHARED_PREF_CONFIG = "Config";
     public static final String SHARED_PREF_PLAYLIST = "Playlist";
     public static final String SHARED_PREF_PLAYLIST_KEY = "PlaylistKey";
     public static final String SHARED_PREF_SCREEN_REGISTERED_KEY = "ScreenRegistered";
+    public static final String SHARED_PREF_SCREEN_ID_KEY = "screenID";
+    public static final String SHARED_PREF_WIDGET_WEATHER_CITY_KEY = "weatherCity";
+    public static final String SHARED_PREF_WIDGET_BAR_POSITION_KEY = "widgetBarPosition";
+    public static final String SHARED_PREF_WIDGET_WEATHER_ENABLED_KEY = "weatherEnabled";
+    public static final String SHARED_PREF_WIDGET_RSS_ENABLED_KEY = "rssEnabled";
+    public static final String SHARED_PREF_WIDGET_BAR_ENABLED_KEY = "widgetBarEnabled";
+    public static final String SHARED_PREF_SCREEN_ORIENTATION_KEY = "ScreenOrientation";
 
     private Application application;
 
@@ -36,6 +44,24 @@ public class DataRepository {
             @Override
             public void setAndPostValue(Boolean value) {
                 sp.edit().putBoolean(SHARED_PREF_SCREEN_REGISTERED_KEY, value).apply();
+            }
+        };
+    }
+
+
+    public MutableLiveData<String> getScreenId(){
+
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<String>(sp, SHARED_PREF_SCREEN_ID_KEY, null) {
+
+            @Override
+            String getValueFromPreferences(String key, String defValue) {
+                return sp.getString(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(String value) {
+                sp.edit().putString(SHARED_PREF_SCREEN_ID_KEY, value).apply();
             }
         };
     }
@@ -62,8 +88,124 @@ public class DataRepository {
         };
     }
 
+    private MutableLiveData<Integer> getScreenOrientation(){
+
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<Integer>(sp, SHARED_PREF_SCREEN_ORIENTATION_KEY, -1) {
+
+            @Override
+            Integer getValueFromPreferences(String key, Integer defValue) {
+                return sp.getInt(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(Integer value) {
+                sp.edit().putInt(SHARED_PREF_SCREEN_ORIENTATION_KEY, value).apply();
+            }
+        };
+
+    }
+
+    public ScreenConfig getScreenConfig(){
+        ScreenConfig screenConfig = new ScreenConfig();
+        screenConfig.setWidgetBarEnabled(getWidgetBarEnabled());
+        screenConfig.setScreenOrientation(getScreenOrientation());
+        screenConfig.setWeatherCity(getWidgetWeatherCity());
+        screenConfig.setWidgetBarPosition(getWidgetBarPosition());
+        screenConfig.setWeatherEnabled(getWidgetWeatherEnabled());
+        screenConfig.setRssEnabled(getWidgetRssEnabled());
+        screenConfig.setRssEnabled(getWidgetRssEnabled());
+        return screenConfig;
+    }
+
+    private MutableLiveData<String> getWidgetWeatherCity(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<String>(sp, SHARED_PREF_WIDGET_WEATHER_CITY_KEY, null) {
+            @Override
+            String getValueFromPreferences(String key, String defValue) {
+                return sp.getString(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(String value) {
+                sp.edit().putString(SHARED_PREF_WIDGET_WEATHER_CITY_KEY, value).apply();
+            }
+        };
+    }
+
+    private MutableLiveData<Integer> getWidgetBarPosition(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<Integer>(sp, SHARED_PREF_WIDGET_BAR_POSITION_KEY, -1) {
+            @Override
+            Integer getValueFromPreferences(String key, Integer defValue) {
+                return sp.getInt(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(Integer value) {
+                sp.edit().putInt(SHARED_PREF_WIDGET_BAR_POSITION_KEY, value).apply();
+            }
+        };
+    }
+
+    private MutableLiveData<Boolean> getWidgetBarEnabled(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<Boolean>(sp, SHARED_PREF_WIDGET_BAR_ENABLED_KEY, false) {
+            @Override
+            Boolean getValueFromPreferences(String key, Boolean defValue) {
+                return sp.getBoolean(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(Boolean value) {
+                sp.edit().putBoolean(SHARED_PREF_WIDGET_BAR_ENABLED_KEY, value).apply();
+            }
+        };
+    }
+
+    private MutableLiveData<Boolean> getWidgetWeatherEnabled(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<Boolean>(sp, SHARED_PREF_WIDGET_WEATHER_ENABLED_KEY, false) {
+            @Override
+            Boolean getValueFromPreferences(String key, Boolean defValue) {
+                return sp.getBoolean(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(Boolean value) {
+                sp.edit().putBoolean(SHARED_PREF_WIDGET_WEATHER_ENABLED_KEY, value).apply();
+            }
+        };
+    }
+
+    private MutableLiveData<Boolean> getWidgetRssEnabled(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<Boolean>(sp, SHARED_PREF_WIDGET_RSS_ENABLED_KEY, false) {
+            @Override
+            Boolean getValueFromPreferences(String key, Boolean defValue) {
+                return sp.getBoolean(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(Boolean value) {
+                sp.edit().putBoolean(SHARED_PREF_WIDGET_RSS_ENABLED_KEY, value).apply();
+            }
+        };
+    }
+
+
     public MutableLiveData<Boolean> getNetworkConnected(){
         return new NetworkConnectionLiveData(application.getApplicationContext());
+    }
+
+    public String getScreenIdValue(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
+        return sp.getString(SHARED_PREF_SCREEN_ID_KEY, null);
+    }
+
+    public int getScreenOrientationValue(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return sp.getInt(SHARED_PREF_SCREEN_ORIENTATION_KEY, -1);
     }
 
     private Playlist getLastPlaylist(){

@@ -7,7 +7,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -39,22 +38,22 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.github.rongi.rotate_layout.layout.RotateLayout;
 import com.google.zxing.WriterException;
 import com.tvoctopus.player.API.APIKeys;
-import com.tvoctopus.player.services.Downloader;
 import com.tvoctopus.player.API.JSonParser;
-import com.tvoctopus.player.services.QuerySchedulerService;
-import com.tvoctopus.player.services.Reporter;
 import com.tvoctopus.player.GifDialog;
 import com.tvoctopus.player.R;
-import com.tvoctopus.player.services.RestartService;
 import com.tvoctopus.player.ScreenListener;
 import com.tvoctopus.player.ScreenReciever;
 import com.tvoctopus.player.ShellExecutor;
 import com.tvoctopus.player.WeatherBroadcastReceiver;
 import com.tvoctopus.player.WeatherListener;
-import com.tvoctopus.player.services.WeatherService;
 import com.tvoctopus.player.model.CommandData;
 import com.tvoctopus.player.model.Playlist;
 import com.tvoctopus.player.model.StatusFlags;
+import com.tvoctopus.player.services.Downloader;
+import com.tvoctopus.player.services.QuerySchedulerService;
+import com.tvoctopus.player.services.Reporter;
+import com.tvoctopus.player.services.RestartService;
+import com.tvoctopus.player.services.WeatherService;
 import com.tvoctopus.player.view.player.PlayerFragment;
 import com.tvoctopus.player.view.widget.WidgetFragment;
 
@@ -84,11 +83,15 @@ import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_270;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_90;
+import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
+import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_PLAYLIST;
 import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_SYNC;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_SCREEN_REGISTERED;
 import static com.tvoctopus.player.services.QuerySchedulerService.PARAM_SCREEN_REGISTERED;
 import static com.tvoctopus.player.services.WeatherService.ACTION_WEATHER_QUERY;
+import static com.tvoctopus.player.services.WeatherService.WEATHER_CITY_KEY;
+import static com.tvoctopus.player.view.widget.WidgetFragment.POSITION_TOP;
 
 public class FullscreenActivity extends AppCompatActivity implements ScreenListener, WeatherListener {
 
@@ -98,9 +101,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private static final boolean AUTO_HIDE = true;
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
     private static final int UI_ANIMATION_DELAY = 100;
-
-    public static final String SHARED_PREF_OCTOPUS_DATA = "OctopusData";
-    public static final String SHARED_PREF_PLAYLIST = "Playlist";
 
     private final Handler mHideHandler = new Handler();
     private RotateLayout mainFrame;
@@ -133,12 +133,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private Intent weatherService = null;
 
     private ArrayList<CommandData> commands;
-    private Playlist playlist;
+//    private Playlist playlist;
 //    private Downloader downloader;
     private Reporter reporter;
-    private boolean isDownloading = false;
+//    private boolean isDownloading = false;
 
-    private String screenID;
     private Bitmap qrBitmap;
 
     private FullScreenActivityViewModel viewModel;
@@ -188,7 +187,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
         playerFrame = findViewById(R.id.player_frame);
         widgetFrame = findViewById(R.id.widgets_frame);
-        widgetFrame.setVisibility(View.GONE);
         constraintLayout = findViewById(R.id.activity_fullscreen_constraint_layout);
         qrImageView = findViewById(R.id.qr_code_imageView);
         textView = findViewById(R.id.textView);
@@ -200,7 +198,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+
+
         viewModel = new ViewModelProvider(this).get(FullScreenActivityViewModel.class);
+
+        initFragments();
+        initServices(viewModel.getScreenIdValue());
 
         viewModel.getStatusFlags().observe(this, statusFlags -> {
             //Screen not registered cases
@@ -224,7 +227,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 dismissMessages();
                 startServices();
 
-                //TODO: Implement apply configurations.
                 if(playerFragment != null){
                     if(!playerFragment.isPlaying()){
                         playerFragment.launchPlayer();
@@ -236,7 +238,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 dismissMessages();
                 stopServices();
 
-                //TODO: Implement apply configurations.
                 if(playerFragment != null){
                     if(!playerFragment.isPlaying()){
                         playerFragment.launchPlayer();
@@ -246,10 +247,32 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         });
 
         viewModel.getPlaylist().observe(this, mediaData -> {
-            //TODO: Send Broadcast for playlist updated.
+            //TODO: Send Broadcast with playlistUpdated flag.
             //  Receive data in PlayerFragment.
 
         });
+
+        viewModel.getConfig().getScreenOrientation().observe(this, this::rotateScreen);
+
+        viewModel.getConfig().getWidgetBarEnabled().observe(this, aBoolean -> {
+            if(aBoolean){
+                widgetFrame.setVisibility(View.VISIBLE);
+            } else {
+                widgetFrame.setVisibility(View.GONE);
+            }
+        });
+
+        viewModel.getConfig().getWeatherCity().observe(this, s -> {
+            weatherService.putExtra(WEATHER_CITY_KEY,s);
+            startService(weatherService);
+        });
+
+        viewModel.getConfig().getWeatherEnabled().observe(this, aBoolean -> widgetFragment.setEnableWeather(aBoolean));
+
+        viewModel.getConfig().getRssEnabled().observe(this, aBoolean -> widgetFragment.setEnableRss(aBoolean));
+
+        viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer, 15, 15));
+
 
         IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
         intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
@@ -280,13 +303,16 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
             public void onReceive(Context context, Intent intent) {
 
                 CommandData commandData = intent.getParcelableExtra(QuerySchedulerService.PARAM_COMMAND_DATA);
-                if (commandData != null && !commandData.getPlaylist().isEmpty()) {
-                    Downloader.getInstance(getApplicationContext()).startDownloads(commandData.getPlaylist());
-                    reporter.setDownloadCommand(commandData);
-                    showGif();
+                if (commandData != null){
+                    applyConfigurations(commandData);
+                    //TODO: Trigger configurationLiveData.
+                    if (!commandData.getPlaylist().isEmpty()) {
+                        Downloader.getInstance(getApplicationContext()).startDownloads(commandData.getPlaylist());
+                        reporter.setDownloadCommand(commandData);
+                        showGif();
+                    }
                 }
             }
-
         };
 
         downloadCompleteReceiver = new BroadcastReceiver() {
@@ -296,14 +322,14 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 String fileName = intent.getStringExtra(Downloader.PARAM_DOWNLOAD_COMPLETE_NAME);
 
                 if(allDownloadsComplete){
-                    //TODO: Trigger playlistLiveData. Report download progress status.
+
                     reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
                     Playlist playlist = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
                     Log.d(TAG, "onReceive: playlistSize: "+playlist.size());
                     viewModel.getPlaylist().postValue(playlist);
                     dismissGif();
                 } else {
-                    //TODO: Report download progress status.
+
                     reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
                 }
             }
@@ -322,13 +348,10 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
             actionBar.hide();
         }
         delayedHide(100);
-
-        SharedPreferences sp = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
-        int screenOrientation = sp.getInt("ScreenOrientation",-1);
+        int screenOrientation = viewModel.getScreenOrientationValue();
         if(screenOrientation != -1){
-            rotateScreen(screenOrientation);
+            viewModel.getConfig().getScreenOrientation().postValue(screenOrientation);
         }
-
         reporter = new Reporter();
         checkPermission(getApplicationContext(), this);
     }
@@ -416,8 +439,8 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
         } else {
-            initFragments();
-            initQueryScheduler();
+//            initFragments();
+//            initQueryScheduler();
         }
     }
 
@@ -428,8 +451,8 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
             // If request is cancelled, the result arrays are empty.
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initFragments();
-                initQueryScheduler();
+//                initFragments();
+//                initQueryScheduler();
             } else {
                 Toast.makeText(getApplicationContext(),
                         getResources().getString(R.string.fullscreen_activity_storage_permission_toast),
@@ -448,36 +471,62 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         handler.postDelayed(() -> {
             setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
             widgetFragment.setEnableRss(false);
+            widgetFragment.setEnableWeather(true);
         },300);
     }
 
     private void initQueryScheduler(){
         //ADD ALL API QUERY URL HERE!!
         try {
-            SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
-            screenID = sharedPreferences.getString("screenID",null);
-            if(screenID == null){
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                screenID = generateRandomID();
-                editor.putString("screenID",screenID);
-                editor.apply();
-            }
+//            SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
+////            screenID = sharedPreferences.getString("screenID",null);
+////            if(screenID == null){
+////                SharedPreferences.Editor editor = sharedPreferences.edit();
+////                screenID = generateRandomID();
+////                editor.putString("screenID",screenID);
+////                editor.apply();
+////            }
 
             // Append screenID to url
-            URL url = new URL("http://panel.tvoctopus.net/api/screen/"+screenID);
+            URL url = new URL("http://panel.tvoctopus.net/api/screen/"+viewModel.getScreenIdValue());
 
             //start scheduler service
             querySchedulerService = new Intent(FullscreenActivity.this, QuerySchedulerService.class);
             querySchedulerService.putExtra("URL",url.toString());
             //start weather service
-            //TODO: Get cached weather data.
-            String weatherUrlString = "https://api.openweathermap.org/data/2.5/weather?q=istanbul&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
+            String city = "istanbul";
             weatherService = new Intent(FullscreenActivity.this, WeatherService.class);
-            weatherService.putExtra("weatherURL",weatherUrlString);
+            weatherService.putExtra(WEATHER_CITY_KEY, city);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
     }
+
+
+
+    private void initServices(String screenId){
+        if(querySchedulerService == null){
+            try {
+            // Append screenID to url
+            URL url = new URL("http://panel.tvoctopus.net/api/screen/"+screenId);
+            //start scheduler service
+            querySchedulerService = new Intent(FullscreenActivity.this, QuerySchedulerService.class);
+            querySchedulerService.putExtra("URL",url.toString());
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        }
+        if(weatherService == null){
+            //start weather service
+            //TODO: Get cached weather data.
+            String city = "istanbul";
+            weatherService = new Intent(FullscreenActivity.this, WeatherService.class);
+            weatherService.putExtra(WEATHER_CITY_KEY, city);
+        }
+    }
+
+
+
 
     // reverse clockwise
     private void rotateScreen(int degree){
@@ -539,7 +588,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     public void setWidgetBarPosition(int position, int widthPercentage, int heightPercentage){
 
         switch (position){
-            case WidgetFragment.POSITION_TOP:
+            case POSITION_TOP:
                 widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
                 ConstraintLayout.LayoutParams paramsTop = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
                 paramsTop.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -629,67 +678,61 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 //                            }
                             // apply orientation
                             //TODO: Apply configurations in sync receiver.(FullScreenActivity)
-                            String orientationString = (String)command.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
-                            if(orientationString != null){
-                                int orientation = Integer.parseInt(orientationString);
-                                SharedPreferences sp2 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,Context.MODE_PRIVATE);
-                                int screenOrientation = sp2.getInt("ScreenOrientation",-1);
-                                if(screenOrientation != orientation){
-                                    sp2.edit().putInt("ScreenOrientation",orientation).apply();
-                                }
-                            }
-
-                            // if there are no downloads update ui with new playlist
-                            if(!isDownloading){
-                                playerFragment.playlistUpdated(playlist);
-                                SharedPreferences sp3 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
-                                int screenOrientation = sp3.getInt("ScreenOrientation",-1);
-                                rotateScreen(screenOrientation);
-                                if(!playerFragment.isPlaying()){
-                                    playerFragment.launchPlayer();
-                                }
-                            }
+//                            String orientationString = (String)command.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
+//                            if(orientationString != null){
+//                                int orientation = Integer.parseInt(orientationString);
+//                                SharedPreferences sp2 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,Context.MODE_PRIVATE);
+//                                int screenOrientation = sp2.getInt("ScreenOrientation",-1);
+//                                if(screenOrientation != orientation){
+//                                    sp2.edit().putInt("ScreenOrientation",orientation).apply();
+//                                }
+//                            }
+//
+//                            // if there are no downloads update ui with new playlist
+//                            if(!isDownloading){
+//                                playerFragment.playlistUpdated(playlist);
+//                                SharedPreferences sp3 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
+//                                int screenOrientation = sp3.getInt("ScreenOrientation",-1);
+//                                rotateScreen(screenOrientation);
+//                                if(!playerFragment.isPlaying()){
+//                                    playerFragment.launchPlayer();
+//                                }
+//                            }
 
                             //TODO: Handle widget bar position, width and height when API results available for widgets. (temporarily used wifi-SSID and overscan metadata fields.)
                             //  Cache widget data for offline usage.
-                            if(command.getMetaData() != null){
-                                HashMap<String, Object> hashMap = command.getMetaData();
-                                String url = "https://api.openweathermap.org/data/2.5/weather?q="+hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
-                                url = url+"&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
-                                weatherService.putExtra("weatherURL",url);
-                                startService(weatherService);
-                                Log.d(TAG, "onNewQuery: top: "+hashMap.get(KEY_PARAMS_OVERSCAN_TOP));
-                                Log.d(TAG, "onNewQuery: bottom: "+hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM));
-                                Log.d(TAG, "onNewQuery: left: "+hashMap.get(KEY_PARAMS_OVERSCAN_LEFT));
-                                Log.d(TAG, "onNewQuery: right: "+hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT));
-                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
-                                    setWidgetBarPosition(WidgetFragment.POSITION_TOP,15,15);
-                                    widgetFrame.setVisibility(View.VISIBLE);
-                                }
-                                if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
-                                    setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15);
-                                    widgetFrame.setVisibility(View.VISIBLE);
-                                }
-                                if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
-                                    setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15);
-                                    widgetFrame.setVisibility(View.VISIBLE);
-                                }
-                                if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
-                                    setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
-                                    widgetFrame.setVisibility(View.VISIBLE);
-                                }
-                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("0")&&
-                                        hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("0")&&
-                                        hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("0")&&
-                                        hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("0")){
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            widgetFrame.setVisibility(View.GONE);
-                                        }
-                                    });
-                                }
-                            }
+//                            if(command.getMetaData() != null){
+//                                HashMap<String, Object> hashMap = command.getMetaData();
+//                                String cityKey = (String) hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
+//                                weatherService.putExtra(WEATHER_CITY_KEY,cityKey);
+//                                startService(weatherService);
+//                                Log.d(TAG, "onNewQuery: top: "+hashMap.get(KEY_PARAMS_OVERSCAN_TOP));
+//                                Log.d(TAG, "onNewQuery: bottom: "+hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM));
+//                                Log.d(TAG, "onNewQuery: left: "+hashMap.get(KEY_PARAMS_OVERSCAN_LEFT));
+//                                Log.d(TAG, "onNewQuery: right: "+hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT));
+//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
+//                                    setWidgetBarPosition(POSITION_TOP,15,15);
+//                                    widgetFrame.setVisibility(View.VISIBLE);
+//                                }
+//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
+//                                    setWidgetBarPosition(WidgetFragment.POSITION_BOTTOM,15,15);
+//                                    widgetFrame.setVisibility(View.VISIBLE);
+//                                }
+//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
+//                                    setWidgetBarPosition(WidgetFragment.POSITION_LEFT,15,15);
+//                                    widgetFrame.setVisibility(View.VISIBLE);
+//                                }
+//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
+//                                    setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
+//                                    widgetFrame.setVisibility(View.VISIBLE);
+//                                }
+//                                if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("0")&&
+//                                        hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("0")&&
+//                                        hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("0")&&
+//                                        hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("0")){
+//                                    runOnUiThread(() -> widgetFrame.setVisibility(View.GONE));
+//                                }
+//                            }
 
                             break;
 
@@ -749,12 +792,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                             break;
                     }
                 }
-                File file = getExternalFilesDir("OctopusDownloads");
-                if(file != null && file.list() != null && !isDownloading){
-                    if(!playerFragment.isPlaying()){
-                        playerFragment.launchPlayer();
-                    }
-                }
+//                File file = getExternalFilesDir("OctopusDownloads");
+//                if(file != null && file.list() != null && !isDownloading){
+//                    if(!playerFragment.isPlaying()){
+//                        playerFragment.launchPlayer();
+//                    }
+//                }
             }
 //            textView.setVisibility(View.GONE);
 //            qrImageView.setVisibility(View.GONE);
@@ -771,7 +814,14 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     }
 
     public void generateAndShowQrCode(){
-
+        String id;
+        if(viewModel.getScreenIdValue() == null){
+            id = generateRandomID();
+            viewModel.getScreenId().postValue(id);
+        } else {
+            id = viewModel.getScreenIdValue();
+        }
+        // Init services with generated screenId.
         int orientation = getResources().getConfiguration().orientation;
         switch(orientation) {
             case Configuration.ORIENTATION_LANDSCAPE:
@@ -789,15 +839,15 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 break;
         }
         try {
-            QRGEncoder qrgEncoder = new QRGEncoder(screenID, null, QRGContents.Type.TEXT, qrDimention);
+            QRGEncoder qrgEncoder = new QRGEncoder(id, null, QRGContents.Type.TEXT, qrDimention);
             qrBitmap = qrgEncoder.encodeAsBitmap();
-            Log.d(TAG, "onNewQuery: screen_id = "+screenID);
+            Log.d(TAG, "onNewQuery: screen_id = "+id);
 
         } catch (WriterException e) {
             e.printStackTrace();
         }
         runOnUiThread(() -> {
-            String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + screenID;
+            String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + id;
             widgetFrame.setVisibility(View.GONE);
             textView.setText(firstMessage);
             qrImageView.setImageBitmap(qrBitmap);
@@ -859,6 +909,46 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         });
     }
 
+    private void applyConfigurations(CommandData commandData){
+
+    //TODO: Aplly Configurations in configurationLiveData. Trigger LiveData for changes.
+        String orientationString = (String)commandData.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
+        if (orientationString != null){
+            int orientation = Integer.parseInt(orientationString);
+            viewModel.getConfig().getScreenOrientation().postValue(orientation);
+        }
+
+        HashMap<String, Object> hashMap = commandData.getMetaData();
+        String cityKey = (String) hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
+        viewModel.getConfig().getWeatherCity().postValue(cityKey);
+
+        int widgetBarPosition = -1;
+        //TODO: Get widget bar percentages from API and post value.
+        if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
+            widgetBarPosition = WidgetFragment.POSITION_TOP;
+        }
+        if(hashMap.get(KEY_PARAMS_OVERSCAN_BOTTOM).equals("1")){
+            widgetBarPosition = WidgetFragment.POSITION_BOTTOM;
+        }
+        if(hashMap.get(KEY_PARAMS_OVERSCAN_LEFT).equals("1")){
+            widgetBarPosition = WidgetFragment.POSITION_LEFT;
+        }
+        if(hashMap.get(KEY_PARAMS_OVERSCAN_RIGHT).equals("1")){
+            widgetBarPosition = WidgetFragment.POSITION_RIGHT;
+        }
+        viewModel.getConfig().getWidgetBarPosition().postValue(widgetBarPosition);
+        if(widgetBarPosition != -1){
+            viewModel.getConfig().getWeatherEnabled().postValue(true);
+            viewModel.getConfig().getWidgetBarEnabled().postValue(true);
+        }
+        else{
+            viewModel.getConfig().getWeatherEnabled().postValue(false);
+            viewModel.getConfig().getWidgetBarEnabled().postValue(false);
+        }
+        //TODO: Get RSS data from API and post value.
+        viewModel.getConfig().getRssEnabled().postValue(false);
+    }
+
 
     //TODO: Implement weather receiver and LiveData.
     @Override
@@ -869,41 +959,41 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
     //TODO: Remove unnecessary code.
 
-    public void downloadComplete(boolean isAllDownloadsComplete) {
-        if(isAllDownloadsComplete){
-            File file = new File(Downloader.DOWNLOAD_DIR);
-            if(file.list() == null){
-                playerFragment.playlistUpdated(playlist);
-                if(!playerFragment.isPlaying()){
-                    playerFragment.launchPlayer();
-                }
-            }
-            runOnUiThread(() -> {
-                if(gifDialog.isShowing()){
-                    gifDialog.dismiss();
-                }
-            });
-            SharedPreferences sp = getSharedPreferences("OctopusData",Context.MODE_PRIVATE);
-            int screenOrientation = sp.getInt("ScreenOrientation",-1);
-            rotateScreen(screenOrientation);
-            isDownloading = false;
-            reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
-        }else{
-            //TODO: Send download progress data from Downloader. Waiting for API command structure.
-            reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
-        }
+//    public void downloadComplete(boolean isAllDownloadsComplete) {
+//        if(isAllDownloadsComplete){
+//            File file = new File(Downloader.DOWNLOAD_DIR);
+//            if(file.list() == null){
+//                playerFragment.playlistUpdated(playlist);
+//                if(!playerFragment.isPlaying()){
+//                    playerFragment.launchPlayer();
+//                }
+//            }
+//            runOnUiThread(() -> {
+//                if(gifDialog.isShowing()){
+//                    gifDialog.dismiss();
+//                }
+//            });
+//            SharedPreferences sp = getSharedPreferences("OctopusData",Context.MODE_PRIVATE);
+//            int screenOrientation = sp.getInt("ScreenOrientation",-1);
+//            rotateScreen(screenOrientation);
+//            isDownloading = false;
+//            reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
+//        }else{
+//            //TODO: Send download progress data from Downloader. Waiting for API command structure.
+//            reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
+//        }
+//
+//    }
 
-    }
-
-    public void downloadStart() {
-        isDownloading = true;
-        runOnUiThread(() -> {
-            if(!gifDialog.isShowing()){
-                gifDialog.show();
-            }
-        });
-
-    }
+//    public void downloadStart() {
+//        isDownloading = true;
+//        runOnUiThread(() -> {
+//            if(!gifDialog.isShowing()){
+//                gifDialog.show();
+//            }
+//        });
+//
+//    }
 
     int qrDimention = 0;
 
