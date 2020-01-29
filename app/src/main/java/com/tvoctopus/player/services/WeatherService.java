@@ -25,20 +25,15 @@ public class WeatherService extends Service {
 
     private final int SCHEDULE_PERIOD = 1000*120;
     private final int SCHEDULE_DELAY = 300;
-
     public static final String ACTION_WEATHER_QUERY = "WeatherQuery";
     public static final String WEATHER_CITY_KEY = "WEATHER_CITY_KEY";
-
-
     private static final String urlP1 = "https://api.openweathermap.org/data/2.5/weather?q=";
     private static final String urlP2 = "&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
-
 
     private URL url;
     private String result;
     private Timer timer;
     private WeatherTask weatherTask;
-    private boolean isStarted = false;
 
     public WeatherService() {
 
@@ -47,7 +42,6 @@ public class WeatherService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         new Thread(() -> {
-            isStarted = true;
             if(timer != null){
                 timer.cancel();
             }
@@ -70,17 +64,12 @@ public class WeatherService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        isStarted = false;
         if(weatherTask != null){
             weatherTask.cancel();
         }
         if(timer != null){
             timer.cancel();
         }
-    }
-
-    public boolean isStarted() {
-        return isStarted;
     }
 
     @Nullable

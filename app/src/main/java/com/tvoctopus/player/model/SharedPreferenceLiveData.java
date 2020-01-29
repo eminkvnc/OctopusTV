@@ -27,7 +27,6 @@ public abstract class SharedPreferenceLiveData<T> extends MutableLiveData<T> {
 
     abstract T getValueFromPreferences(String key, T defValue);
 
-
     public abstract void setAndPostValue(T value);
 
     @Override
@@ -42,9 +41,6 @@ public abstract class SharedPreferenceLiveData<T> extends MutableLiveData<T> {
         setAndPostValue(value);
     }
 
-
-
-
     @Override
     protected void onActive() {
         super.onActive();
@@ -57,6 +53,4 @@ public abstract class SharedPreferenceLiveData<T> extends MutableLiveData<T> {
         sharedPrefs.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
         super.onInactive();
     }
-
-
 }

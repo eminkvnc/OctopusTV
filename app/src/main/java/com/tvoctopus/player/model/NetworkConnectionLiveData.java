@@ -49,14 +49,9 @@ public class NetworkConnectionLiveData extends MutableLiveData<Boolean> {
         }
     }
 
-
     @Override
     protected void onInactive() {
         super.onInactive();
         cm.unregisterNetworkCallback(networkCallback);
     }
-
-
-
-
 }

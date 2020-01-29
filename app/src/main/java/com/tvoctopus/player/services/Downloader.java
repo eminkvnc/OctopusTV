@@ -33,10 +33,8 @@ public class Downloader{
     public static final String PARAM_DOWNLOAD_COMPLETE_STATUS = "PARAM_DOWNLOAD_COMPLETE_STATUS";
     public static final String PARAM_DOWNLOAD_COMPLETE_NAME = "PARAM_DOWNLOAD_COMPLETE_NAME";
     public static final String PARAM_DOWNLOAD_COMPLETE_PLAYLIST = "PARAM_DOWNLOAD_COMPLETE_PLAYLIST";
-    public static final String PARAM_FILE_NAME = "PARAM_FILE_NAME";
 
     private DownloadManager downloadManager;
-//    private Context context;
     private long lastDownload=-1L;
     private BroadcastReceiver onCompleteBroadcastReceiver;
     private HashMap<Long, String> downloadMap;
@@ -88,7 +86,6 @@ public class Downloader{
         downloadManager = (DownloadManager)context.getSystemService(DOWNLOAD_SERVICE);
     }
 
-
     public void stop(){
         try{
             context.unregisterReceiver(onCompleteBroadcastReceiver);
@@ -108,34 +105,12 @@ public class Downloader{
         instance = null;
     }
 
-
-    public void startDownload(String fileName) {
-
-        if(fileName != null){
-            File file = new File(DOWNLOAD_DIR+"/"+fileName);
-            if(!file.exists()){
-                Uri uri=Uri.parse(MEDIA_DOWNLOAD_URL+fileName);
-                lastDownload = downloadManager.enqueue(new DownloadManager.Request(uri)
-                        .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI |
-                                DownloadManager.Request.NETWORK_MOBILE)
-                        .setAllowedOverRoaming(false)
-                        .setTitle(fileName)
-                        .setDescription(context.getResources().getString(R.string.downloader_notification_media_downloading))
-                        .setDestinationInExternalFilesDir(context, DOWNLOAD_DIR_TEMP, fileName)
-                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE));
-                Log.d(getClass().getName(), "startDownload: "+DOWNLOAD_DIR+"/"+fileName);
-                downloadMap.put(lastDownload, fileName);
-            }
-        }
-    }
-
     public void startDownloads(Playlist playlist) {
 
         this.playlist = playlist;
         for(MediaData mediaData : playlist){
             String fileName = mediaData.getName();
             if(fileName != null){
-
                 Uri uri=Uri.parse(MEDIA_DOWNLOAD_URL+fileName);
                 lastDownload = downloadManager.enqueue(new DownloadManager.Request(uri)
                         .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI |

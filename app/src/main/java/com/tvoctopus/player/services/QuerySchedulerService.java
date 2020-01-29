@@ -31,7 +31,6 @@ public class QuerySchedulerService extends Service {
     private final int SCHEDULE_PERIOD = 1000*30;
     private final int SCHEDULE_DELAY = 300;
 
-    public static final String ACTION_ON_NEW_QUERY = "OnNewQuery";
     public static final String ACTION_SCREEN_REGISTERED = "ACTION_SCREEN_REGISTERED";
     public static final String ACTION_COMMAND_SYNC = "ACTION_COMMAND_SYNC";
     public static final String ACTION_COMMAND_REPORT = "ACTION_COMMAND_REPORT";
@@ -85,7 +84,6 @@ public class QuerySchedulerService extends Service {
 
         @Override
         public void run() {
-
             try {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 InputStream inputStream;
@@ -103,10 +101,6 @@ public class QuerySchedulerService extends Service {
                     connection.disconnect();
                     result = stringBuilder.toString();
                 }
-//                Intent intent = new Intent();
-//                intent.setAction(ACTION_ON_NEW_QUERY);
-//                intent.putExtra("Result",result);
-//                sendBroadcast(intent);
 
                 JSONObject jo = null;
                 if (result != null) {

@@ -22,14 +22,6 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
         dataRepository = new DataRepository(application);
     }
 
-//    public MutableLiveData<Boolean> getScreenRegistered(){
-//        return dataRepository.getScreenRegistered();
-//    }
-//
-//    public MutableLiveData<Boolean> getNetworkConnected(){
-//        return dataRepository.getNetworkConnected();
-//    }
-
     public MediatorLiveData<StatusFlags> getStatusFlags(){
 
         StatusFlagsLiveData statusFlagsLiveData =
@@ -41,8 +33,6 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
     public MutableLiveData<Playlist> getPlaylist(){
         return dataRepository.getPlaylist();
     }
-
-
 
     public MutableLiveData<String> getScreenId(){
         return dataRepository.getScreenId();
@@ -59,6 +49,4 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
     public ScreenConfig getConfig(){
         return dataRepository.getScreenConfig();
     }
-
-
 }

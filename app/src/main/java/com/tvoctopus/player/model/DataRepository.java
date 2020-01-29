@@ -33,7 +33,6 @@ public class DataRepository {
     //TODO: implement all SharedPreferences operations.
 
     public MutableLiveData<Boolean> getScreenRegistered(){
-
         SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
         return new SharedPreferenceLiveData<Boolean>(sp, SHARED_PREF_SCREEN_REGISTERED_KEY, false) {
             @Override
@@ -48,12 +47,9 @@ public class DataRepository {
         };
     }
 
-
     public MutableLiveData<String> getScreenId(){
-
         SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
         return new SharedPreferenceLiveData<String>(sp, SHARED_PREF_SCREEN_ID_KEY, null) {
-
             @Override
             String getValueFromPreferences(String key, String defValue) {
                 return sp.getString(key, defValue);
@@ -67,7 +63,6 @@ public class DataRepository {
     }
 
     public MutableLiveData<Playlist> getPlaylist(){
-
         SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_PLAYLIST, Context.MODE_PRIVATE);
         return new SharedPreferenceLiveData<Playlist>(sp, SHARED_PREF_PLAYLIST_KEY, null) {
             @Override
@@ -89,7 +84,6 @@ public class DataRepository {
     }
 
     private MutableLiveData<Integer> getScreenOrientation(){
-
         SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
         return new SharedPreferenceLiveData<Integer>(sp, SHARED_PREF_SCREEN_ORIENTATION_KEY, -1) {
 
@@ -104,18 +98,6 @@ public class DataRepository {
             }
         };
 
-    }
-
-    public ScreenConfig getScreenConfig(){
-        ScreenConfig screenConfig = new ScreenConfig();
-        screenConfig.setWidgetBarEnabled(getWidgetBarEnabled());
-        screenConfig.setScreenOrientation(getScreenOrientation());
-        screenConfig.setWeatherCity(getWidgetWeatherCity());
-        screenConfig.setWidgetBarPosition(getWidgetBarPosition());
-        screenConfig.setWeatherEnabled(getWidgetWeatherEnabled());
-        screenConfig.setRssEnabled(getWidgetRssEnabled());
-        screenConfig.setRssEnabled(getWidgetRssEnabled());
-        return screenConfig;
     }
 
     private MutableLiveData<String> getWidgetWeatherCity(){
@@ -193,7 +175,6 @@ public class DataRepository {
         };
     }
 
-
     public MutableLiveData<Boolean> getNetworkConnected(){
         return new NetworkConnectionLiveData(application.getApplicationContext());
     }
@@ -206,6 +187,18 @@ public class DataRepository {
     public int getScreenOrientationValue(){
         SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
         return sp.getInt(SHARED_PREF_SCREEN_ORIENTATION_KEY, -1);
+    }
+
+    public ScreenConfig getScreenConfig(){
+        ScreenConfig screenConfig = new ScreenConfig();
+        screenConfig.setWidgetBarEnabled(getWidgetBarEnabled());
+        screenConfig.setScreenOrientation(getScreenOrientation());
+        screenConfig.setWeatherCity(getWidgetWeatherCity());
+        screenConfig.setWidgetBarPosition(getWidgetBarPosition());
+        screenConfig.setWeatherEnabled(getWidgetWeatherEnabled());
+        screenConfig.setRssEnabled(getWidgetRssEnabled());
+        screenConfig.setRssEnabled(getWidgetRssEnabled());
+        return screenConfig;
     }
 
     private Playlist getLastPlaylist(){
