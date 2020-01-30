@@ -44,8 +44,6 @@ import com.tvoctopus.player.R;
 import com.tvoctopus.player.ScreenListener;
 import com.tvoctopus.player.ScreenReciever;
 import com.tvoctopus.player.ShellExecutor;
-import com.tvoctopus.player.WeatherBroadcastReceiver;
-import com.tvoctopus.player.WeatherListener;
 import com.tvoctopus.player.model.CommandData;
 import com.tvoctopus.player.model.Playlist;
 import com.tvoctopus.player.model.StatusFlags;
@@ -69,18 +67,30 @@ import java.util.UUID;
 import androidmads.library.qrgenearator.QRGContents;
 import androidmads.library.qrgenearator.QRGEncoder;
 
-import static com.tvoctopus.player.API.APIKeys.*;
+import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_REPORT;
+import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_RESET;
+import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_SCREENSHOT;
+import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
+import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
+import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
+import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
+import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
+import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
+import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_0;
+import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_180;
+import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_270;
+import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_90;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_PLAYLIST;
 import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
+import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_REPORT;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_SYNC;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_SCREEN_REGISTERED;
 import static com.tvoctopus.player.services.QuerySchedulerService.PARAM_SCREEN_REGISTERED;
-import static com.tvoctopus.player.services.WeatherService.ACTION_WEATHER_QUERY;
 import static com.tvoctopus.player.services.WeatherService.WEATHER_CITY_KEY;
 import static com.tvoctopus.player.view.widget.WidgetFragment.POSITION_TOP;
 
-public class FullscreenActivity extends AppCompatActivity implements ScreenListener, WeatherListener {
+public class FullscreenActivity extends AppCompatActivity implements ScreenListener {
 
     public static final String TAG = "FullscreenActivity";
 
@@ -102,7 +112,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private Activity activity;
 
     private ScreenReciever screenReciever;
-    private WeatherBroadcastReceiver weatherBroadcastReceiver;
 
     private BroadcastReceiver screenRegisteredReceiver;
     private BroadcastReceiver syncCommandReceiver;
@@ -114,12 +123,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private BroadcastReceiver screenShotCommandReceiver;
     private BroadcastReceiver networkStateBroadcastReceiver;
     private BroadcastReceiver downloadCompleteReceiver;
+    private BroadcastReceiver weatherReceiver;
 
     private Intent querySchedulerService = null;
     private Intent weatherService = null;
 
     private ArrayList<CommandData> commands;
-    private Reporter reporter;
     private Bitmap qrBitmap;
 
     private FullScreenActivityViewModel viewModel;
@@ -241,10 +250,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         screenReciever = new ScreenReciever(this);
         registerReceiver(screenReciever, intentFilter2);
 
-        IntentFilter intentFilter4 = new IntentFilter(ACTION_WEATHER_QUERY);
-        weatherBroadcastReceiver = new WeatherBroadcastReceiver(this);
-        registerReceiver(weatherBroadcastReceiver,intentFilter4);
-
         screenRegisteredReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -264,13 +269,18 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 CommandData commandData = intent.getParcelableExtra(QuerySchedulerService.PARAM_COMMAND_DATA);
                 if (commandData != null){
                     applyConfigurations(commandData);
-                    //TODO: Trigger configurationLiveData.
                     if (!commandData.getPlaylist().isEmpty()) {
-                        Downloader.getInstance(getApplicationContext()).startDownloads(commandData.getPlaylist());
-                        reporter.setDownloadCommand(commandData);
+                        Downloader.getInstance(getApplicationContext()).startDownloads(commandData);
                         showGif();
                     }
                 }
+            }
+        };
+
+        reportCommandReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Reporter.getInstance(getApplicationContext()).reportDeviceStatus(viewModel.getScreenIdValue());
             }
         };
 
@@ -278,17 +288,26 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
             @Override
             public void onReceive(Context context, Intent intent) {
                 boolean allDownloadsComplete = intent.getBooleanExtra(Downloader.PARAM_DOWNLOAD_COMPLETE_STATUS,false);
+                String commandId = intent.getStringExtra(Downloader.PARAM_DOWNLOAD_COMMAND_ID);
                 if(allDownloadsComplete){
-                    reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_SUCCEEDED);
+                    Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_SUCCEEDED);
                     Playlist playlist = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
                     Log.d(TAG, "onReceive: playlistSize: "+playlist.size());
                     viewModel.getPlaylist().postValue(playlist);
                     dismissGif();
                 } else {
-                    reporter.reportCommandStatus(reporter.getDownloadCommand(),Reporter.COMMAND_STATUS_INPROGRESS);
+                    Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_INPROGRESS);
                 }
             }
         };
+
+        weatherReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+            }
+        };
+
     }
 
     @Override
@@ -307,7 +326,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         if(screenOrientation != -1){
             viewModel.getConfig().getScreenOrientation().postValue(screenOrientation);
         }
-        reporter = new Reporter();
         checkPermission(getApplicationContext(), this);
     }
 
@@ -318,13 +336,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         stopService(querySchedulerService);
         stopService(weatherService);
         unregisterReceiver(screenReciever);
-        unregisterReceiver(weatherBroadcastReceiver);
 
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
         lbm.unregisterReceiver(screenRegisteredReceiver);
         lbm.unregisterReceiver(downloadCompleteReceiver);
         lbm.unregisterReceiver(syncCommandReceiver);
-//        lbm.unregisterReceiver(screenRegisteredReceiver);
+        lbm.unregisterReceiver(reportCommandReceiver);
 //        lbm.unregisterReceiver(screenRegisteredReceiver);
 //        lbm.unregisterReceiver(screenRegisteredReceiver);
 
@@ -340,7 +357,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
         lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
         lbm.registerReceiver(syncCommandReceiver, new IntentFilter(ACTION_COMMAND_SYNC));
-//        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+        lbm.registerReceiver(reportCommandReceiver, new IntentFilter(ACTION_COMMAND_REPORT));
 //        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
 //        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
     }
@@ -437,6 +454,12 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
             weatherService = new Intent(FullscreenActivity.this, WeatherService.class);
             weatherService.putExtra(WEATHER_CITY_KEY, city);
         }
+    }
+
+    private void initRecievers(){
+
+
+
     }
 
     // reverse clockwise
@@ -545,11 +568,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
                         case KEY_COMMANDS_REPORT:
                             //process report command
-                            reporter.reportDeviceStatus(getApplicationContext());
+                            Reporter.getInstance(getApplicationContext()).reportDeviceStatus(viewModel.getScreenIdValue());
                             break;
 
                         case KEY_COMMANDS_RESET:
-                            reporter.reportCommandStatus(command,"succeeded");
+                            Reporter.getInstance(getApplicationContext()).reportCommandStatus(command.getId(),"succeeded");
                             clearApplicationData();
                             finishAffinity();
                             break;
@@ -699,22 +722,20 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
     private void applyConfigurations(CommandData commandData){
 
-    //TODO: Aplly Configurations in configurationLiveData. Trigger LiveData for changes.
         String orientationString = (String)commandData.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
         if (orientationString != null){
             int orientation = Integer.parseInt(orientationString);
             viewModel.getConfig().getScreenOrientation().postValue(orientation);
         }
 
-        //TODO: Handle widget bar position, width and height when API results
-        // available for widgets. (temporarily used wifi-SSID and overscan metadata fields.)
-        //  Cache widget data for offline usage.
+        //TODO: Handle widget bar position, percentage, width and height when API results
+        // available for widgets.
+        // (temporarily used wifi-SSID and overscan metadata fields. Percentage not handled yet.)
         HashMap<String, Object> hashMap = commandData.getMetaData();
         String cityKey = (String) hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
         viewModel.getConfig().getWeatherCity().postValue(cityKey);
 
         int widgetBarPosition = -1;
-        //TODO: Get widget bar percentages from API and post value.
         if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
             widgetBarPosition = WidgetFragment.POSITION_TOP;
         }
@@ -738,14 +759,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         }
         //TODO: Get RSS data from API and post value.
         viewModel.getConfig().getRssEnabled().postValue(false);
-    }
-
-
-    //TODO: Implement weather receiver and LiveData.
-    @Override
-    public void weatherUpdated(JSONObject result) {
-        Log.d(TAG, "weatherUpdated: "+result.toString());
-        widgetFragment.updateWeather(new JSonParser().parseWeatherData(result));
     }
 
     int qrDimention = 0;

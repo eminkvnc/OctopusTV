@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class WeatherService extends Service {
     private final int SCHEDULE_PERIOD = 1000*120;
     private final int SCHEDULE_DELAY = 300;
     public static final String ACTION_WEATHER_QUERY = "WeatherQuery";
+    public static final String PARAM_WEATHER_RESULT = "WeatherResult";
     public static final String WEATHER_CITY_KEY = "WEATHER_CITY_KEY";
     private static final String urlP1 = "https://api.openweathermap.org/data/2.5/weather?q=";
     private static final String urlP2 = "&units=metric&appid=aaba7194c4a518878cbc6c226db04586";
@@ -102,8 +104,8 @@ public class WeatherService extends Service {
                 }
                 Intent intent = new Intent();
                 intent.setAction(ACTION_WEATHER_QUERY);
-                intent.putExtra("WeatherResult", result);
-                sendBroadcast(intent);
+                intent.putExtra(PARAM_WEATHER_RESULT, result);
+                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
             } catch (IOException e) {
                 e.printStackTrace();
             }

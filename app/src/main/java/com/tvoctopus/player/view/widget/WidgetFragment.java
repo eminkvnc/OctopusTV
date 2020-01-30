@@ -1,5 +1,9 @@
 package com.tvoctopus.player.view.widget;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.view.Display;
@@ -15,8 +19,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.tvoctopus.player.API.JSonParser;
 import com.tvoctopus.player.R;
+import com.tvoctopus.player.services.WeatherService;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 
@@ -38,6 +48,8 @@ public class WidgetFragment extends Fragment {
     private TextView weatherLocationTextView;
     private ImageView weatherIconImageView;
     private WebView rssWebView;
+
+    private BroadcastReceiver weatherReceiver;
 
     public WidgetFragment() {
     }
@@ -65,6 +77,33 @@ public class WidgetFragment extends Fragment {
         iconsMap.put("50n", R.drawable.ic_fog);
     }
 
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+
+        //TODO: Implement weather LiveData and post updated value.(Cache weather data)
+        weatherReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String result = intent.getStringExtra(WeatherService.PARAM_WEATHER_RESULT);
+                updateWeather(result);
+            }
+        };
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(getContext())
+                .registerReceiver(weatherReceiver, new IntentFilter(WeatherService.ACTION_WEATHER_QUERY));
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(weatherReceiver);
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -86,6 +125,9 @@ public class WidgetFragment extends Fragment {
         widgetLinearLayout.addView(rssWebView);
         return v;
     }
+
+
+
     //TODO: Set transparency from API.
     public void setWidgetBarOrientation(int orientation, int widthPercentage, int heightPercentage){
         widgetLinearLayout.setOrientation(orientation);
@@ -108,13 +150,19 @@ public class WidgetFragment extends Fragment {
         rssWebView.setLayoutParams(rssLayoutParams);
     }
 
-    public void updateWeather(HashMap<String, String> weatherData){
-        //TODO: Update icon.
-        int temperature = Double.valueOf(weatherData.get("temperature")).intValue();
-        weatherTempratureTextView.setText(String.valueOf(temperature));
-        weatherLocationTextView.setText(weatherData.get("location"));
-        weatherIconImageView.setImageResource(iconsMap.get(weatherData.get("icon")));
-
+    public void updateWeather(String data){
+        try {
+            if (data != null) {
+                JSONObject jo = new JSONObject(data);
+                HashMap<String, String> weatherData = new JSonParser().parseWeatherData(jo);
+                int temperature = Double.valueOf(weatherData.get("temperature")).intValue();
+                weatherTempratureTextView.setText(String.valueOf(temperature));
+                weatherLocationTextView.setText(weatherData.get("location"));
+                weatherIconImageView.setImageResource(iconsMap.get(weatherData.get("icon")));
+            }
+        } catch (JSONException | NullPointerException e) {
+            e.printStackTrace();
+        }
     }
 
     public void setEnableWeather(boolean isEnabled){

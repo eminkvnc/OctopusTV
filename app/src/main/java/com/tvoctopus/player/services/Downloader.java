@@ -13,6 +13,7 @@ import android.util.Log;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.tvoctopus.player.R;
+import com.tvoctopus.player.model.CommandData;
 import com.tvoctopus.player.model.MediaData;
 import com.tvoctopus.player.model.Playlist;
 
@@ -31,7 +32,7 @@ public class Downloader{
 
     public static final String ACTION_DOWNLOAD_FILE_COMPLETE = "ACTION_DOWNLOAD_FILE_COMPLETE";
     public static final String PARAM_DOWNLOAD_COMPLETE_STATUS = "PARAM_DOWNLOAD_COMPLETE_STATUS";
-    public static final String PARAM_DOWNLOAD_COMPLETE_NAME = "PARAM_DOWNLOAD_COMPLETE_NAME";
+    public static final String PARAM_DOWNLOAD_COMMAND_ID = "PARAM_DOWNLOAD_COMMAND_ID";
     public static final String PARAM_DOWNLOAD_COMPLETE_PLAYLIST = "PARAM_DOWNLOAD_COMPLETE_PLAYLIST";
 
     private DownloadManager downloadManager;
@@ -39,6 +40,7 @@ public class Downloader{
     private BroadcastReceiver onCompleteBroadcastReceiver;
     private HashMap<Long, String> downloadMap;
     private Playlist playlist;
+    private String commandId;
 
     private static Downloader instance;
     private Context context;
@@ -54,7 +56,7 @@ public class Downloader{
 
         this.context = con;
         downloadMap = new HashMap<>();
-        //TODO: Execute not queued downloads.
+        //TODO: Execute queued downloads.
         onCompleteBroadcastReceiver = new BroadcastReceiver() {
             public void onReceive(Context ctx, Intent intent) {
                 DownloadManager.Query query = new DownloadManager.Query();
@@ -66,14 +68,14 @@ public class Downloader{
                 if (cursor != null && cursor.getCount() > 0) {
                     Intent i = new Intent(ACTION_DOWNLOAD_FILE_COMPLETE);
                     i.putExtra(PARAM_DOWNLOAD_COMPLETE_STATUS,false);
-                    i.putExtra(PARAM_DOWNLOAD_COMPLETE_NAME, downloadMap.get(downloadId));
+                    i.putExtra(PARAM_DOWNLOAD_COMMAND_ID, commandId);
                     LocalBroadcastManager.getInstance(context).sendBroadcast(i);
                     Log.d(TAG, "Broadcast from Downloader with action: "+ACTION_DOWNLOAD_FILE_COMPLETE);
                     cursor.close();
                 } else {
                     Intent i = new Intent(ACTION_DOWNLOAD_FILE_COMPLETE);
                     i.putExtra(PARAM_DOWNLOAD_COMPLETE_STATUS,true);
-                    i.putExtra(PARAM_DOWNLOAD_COMPLETE_NAME, downloadMap.get(downloadId));
+                    i.putExtra(PARAM_DOWNLOAD_COMMAND_ID, commandId);
                     i.putExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST, (Parcelable) playlist);
                     LocalBroadcastManager.getInstance(context).sendBroadcast(i);
                     Log.d(TAG, "Broadcast from Downloader with action: "+ACTION_DOWNLOAD_FILE_COMPLETE);
@@ -105,9 +107,10 @@ public class Downloader{
         instance = null;
     }
 
-    public void startDownloads(Playlist playlist) {
+    public void startDownloads(CommandData commandData) {
 
-        this.playlist = playlist;
+        this.playlist = commandData.getPlaylist();
+        this.commandId = commandData.getId();
         for(MediaData mediaData : playlist){
             String fileName = mediaData.getName();
             if(fileName != null){

@@ -1,13 +1,11 @@
 package com.tvoctopus.player.services;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 
 import com.tvoctopus.player.BuildConfig;
-import com.tvoctopus.player.model.CommandData;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,14 +26,21 @@ import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import static android.content.Context.MODE_PRIVATE;
-import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
-
 public class Reporter {
 
 
-    public Reporter() {
+    private static Reporter instance;
+    private Context context;
 
+    public static Reporter getInstance(Context context){
+        if(instance == null){
+            instance = new Reporter(context);
+        }
+        return instance;
+    }
+
+    private Reporter(Context context) {
+        this.context = context;
     }
 
     public static String TAG = "Reporter";
@@ -43,13 +48,12 @@ public class Reporter {
     public static final String COMMAND_STATUS_SUCCEEDED = "succeeded";
     public static final String COMMAND_STATUS_INPROGRESS = "in-progress";
     private String queryUrl = "http://panel.tvoctopus.net/";
-    private CommandData downloadCommand;
 
-    public void reportCommandStatus(CommandData commandData, String status){
+    public void reportCommandStatus(String commandId, String status){
 
         new Thread(() -> {
             try {
-                String urlString = queryUrl+"api/command/"+commandData.getId();
+                String urlString = queryUrl+"api/command/"+commandId;
                 urlString += "?"+"status"+"="+status;
                 URL commandQueryUrl = new URL(urlString);
                 HttpURLConnection connection = (HttpURLConnection) commandQueryUrl.openConnection();
@@ -78,7 +82,7 @@ public class Reporter {
             }
         }).start();
     }
-    public void reportDeviceStatus(Context context){
+    public void reportDeviceStatus(String screenId){
 
         new Thread(() -> {
             String ipAddress;
@@ -86,14 +90,11 @@ public class Reporter {
             String wifiSSID;
             String playerVersion;
             String cecStatus;
-            String screenID;
             // add cpu and ram stats, disk space, android version, start time, network type(WIFI, MOBILE, ETH)
 
             try {
                 ipAddress = getIPAddress(true);
                 macAddress = getMacAddress();
-                SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
-                screenID = sharedPreferences.getString("screenID",null);
                 playerVersion = BuildConfig.VERSION_NAME;
                 WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService (Context.WIFI_SERVICE);
                 WifiInfo info;
@@ -112,7 +113,7 @@ public class Reporter {
 
                 JSONObject joStatus = new JSONObject();
                 joStatus.put("version",playerVersion);
-                joStatus.put("tag",screenID);
+                joStatus.put("tag",screenId);
                 joStatus.put("ip",ipAddress);
                 joStatus.put("mac",macAddress);
                 joStatus.put("cec",cecStatus);
@@ -127,7 +128,7 @@ public class Reporter {
                 jo.put("data",joData);
                 Log.d(TAG, "reportDeviceStatus: "+jo.toString());
 
-                String urlString = queryUrl+"api/screen/"+screenID;
+                String urlString = queryUrl+"api/screen/"+screenId;
                 URL commandQueryUrl = new URL(urlString);
                 HttpURLConnection connection = (HttpURLConnection) commandQueryUrl.openConnection();
                 connection.setRequestMethod("POST");
@@ -210,14 +211,6 @@ public class Reporter {
             }
         } catch (Exception ex) { } // for now eat exceptions
         return "";
-    }
-
-    public CommandData getDownloadCommand() {
-        return downloadCommand;
-    }
-
-    public void setDownloadCommand(CommandData downloadCommand) {
-        this.downloadCommand = downloadCommand;
     }
 
 

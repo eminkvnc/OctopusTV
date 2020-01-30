@@ -130,7 +130,7 @@ public class JSonParser {
         Log.d(TAG, "parseParams: parse complete");
 
     }
-
+    //TODO: Generate weatherData object and parse data to object.
     public HashMap<String, String> parseWeatherData(JSONObject input){
 
         HashMap<String, String> weatherData = new HashMap<>();
