@@ -41,12 +41,9 @@ import com.tvoctopus.player.API.APIKeys;
 import com.tvoctopus.player.API.JSonParser;
 import com.tvoctopus.player.GifDialog;
 import com.tvoctopus.player.R;
-import com.tvoctopus.player.ScreenListener;
-import com.tvoctopus.player.ScreenReciever;
 import com.tvoctopus.player.ShellExecutor;
 import com.tvoctopus.player.model.CommandData;
 import com.tvoctopus.player.model.Playlist;
-import com.tvoctopus.player.model.StatusFlags;
 import com.tvoctopus.player.services.Downloader;
 import com.tvoctopus.player.services.QuerySchedulerService;
 import com.tvoctopus.player.services.Reporter;
@@ -58,8 +55,6 @@ import com.tvoctopus.player.view.widget.WidgetFragment;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
@@ -67,8 +62,6 @@ import java.util.UUID;
 import androidmads.library.qrgenearator.QRGContents;
 import androidmads.library.qrgenearator.QRGEncoder;
 
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_REPORT;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_RESET;
 import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_SCREENSHOT;
 import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
 import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
@@ -80,17 +73,22 @@ import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_270;
 import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_90;
+import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_CONFIG;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_PLAYLIST;
+import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_SCREEN_ID_KEY;
+import static com.tvoctopus.player.services.Downloader.DOWNLOAD_DIR;
+import static com.tvoctopus.player.services.Downloader.DOWNLOAD_DIR_TEMP;
 import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_REPORT;
+import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_RESET;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_SYNC;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_SCREEN_REGISTERED;
 import static com.tvoctopus.player.services.QuerySchedulerService.PARAM_SCREEN_REGISTERED;
 import static com.tvoctopus.player.services.WeatherService.WEATHER_CITY_KEY;
 import static com.tvoctopus.player.view.widget.WidgetFragment.POSITION_TOP;
 
-public class FullscreenActivity extends AppCompatActivity implements ScreenListener {
+public class FullscreenActivity extends AppCompatActivity {
 
     public static final String TAG = "FullscreenActivity";
 
@@ -111,8 +109,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private GifDialog gifDialog;
     private Activity activity;
 
-    private ScreenReciever screenReciever;
-
     private BroadcastReceiver screenRegisteredReceiver;
     private BroadcastReceiver syncCommandReceiver;
     private BroadcastReceiver reportCommandReceiver;
@@ -121,9 +117,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private BroadcastReceiver turnOnTvCommandReceiver;
     private BroadcastReceiver turnOffTvCommandReceiver;
     private BroadcastReceiver screenShotCommandReceiver;
-    private BroadcastReceiver networkStateBroadcastReceiver;
     private BroadcastReceiver downloadCompleteReceiver;
-    private BroadcastReceiver weatherReceiver;
 
     private Intent querySchedulerService = null;
     private Intent weatherService = null;
@@ -187,19 +181,18 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         initFragments();
         initServices(viewModel.getScreenIdValue());
 
-        viewModel.getStatusFlags().observe(this, statusFlags -> {
-            //Screen not registered cases
-            Log.d(TAG, "onChanged: statusFlags: screenRegistered:"+statusFlags.isScreenRegistered()+" networkConnected: "+statusFlags.isNetworkConnected());
-            if(statusFlags.isNetworkConnected() && !statusFlags.isScreenRegistered()){
+        viewModel.getNetworkConnected().observe(this, networkConnected -> {
+            boolean screenRegistered = viewModel.getScreenRegisteredValue();
+            if(networkConnected && !screenRegistered){
                 generateAndShowQrCode();
                 startServices();
             }
-            if(!statusFlags.isNetworkConnected() && !statusFlags.isScreenRegistered()){
+            if(!networkConnected && !screenRegistered){
                 showNetworkConnectionMessage();
                 stopServices();
             }
             //Screen registered cases
-            if(statusFlags.isNetworkConnected() && statusFlags.isScreenRegistered()){
+            if(networkConnected && screenRegistered){
                 dismissMessages();
                 startServices();
 
@@ -208,7 +201,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 }
 
             }
-            if(!statusFlags.isNetworkConnected() && statusFlags.isScreenRegistered()){
+            if(!networkConnected && screenRegistered){
                 dismissMessages();
                 stopServices();
 
@@ -217,6 +210,21 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 }
             }
         });
+
+        viewModel.getScreenRegistered().observe(this, screenRegistered -> {
+            if(!screenRegistered){
+                generateAndShowQrCode();
+            }
+            //Screen registered cases
+            else{
+                dismissMessages();
+                if (playerFragment != null && !playerFragment.isPlaying()) {
+                    playerFragment.launchPlayer();
+                }
+            }
+        });
+
+        viewModel.getScreenId().observe(this, s -> querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, s));
 
         viewModel.getPlaylist().observe(this, mediaData -> {
             //TODO: Send Broadcast with playlistUpdated flag.
@@ -245,20 +253,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
         viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer, 15, 15));
 
-        IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
-        intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
-        screenReciever = new ScreenReciever(this);
-        registerReceiver(screenReciever, intentFilter2);
-
         screenRegisteredReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 boolean isRegistered = intent.getBooleanExtra(PARAM_SCREEN_REGISTERED,false);
-                StatusFlags statusFlags = viewModel.getStatusFlags().getValue();
-                if (statusFlags != null) {
-                    statusFlags.setScreenRegistered(isRegistered);
-                    viewModel.getStatusFlags().postValue(statusFlags);
-                }
+                viewModel.getScreenRegistered().postValue(isRegistered);
             }
         };
 
@@ -284,6 +283,19 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
             }
         };
 
+        resetCommandReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                CommandData commandData = intent.getParcelableExtra(QuerySchedulerService.PARAM_COMMAND_DATA);
+                if (commandData != null){
+                    Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandData.getId(),"succeeded");
+                    clearApplicationData();
+                    finishAffinity();
+                }
+
+            }
+        };
+
         downloadCompleteReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -294,17 +306,11 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                     Playlist playlist = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
                     Log.d(TAG, "onReceive: playlistSize: "+playlist.size());
                     viewModel.getPlaylist().postValue(playlist);
+                    playerFragment.playlistUpdated(playlist);
                     dismissGif();
                 } else {
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_INPROGRESS);
                 }
-            }
-        };
-
-        weatherReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-
             }
         };
 
@@ -335,14 +341,13 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         playerFragment.stopPlayer();
         stopService(querySchedulerService);
         stopService(weatherService);
-        unregisterReceiver(screenReciever);
 
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
         lbm.unregisterReceiver(screenRegisteredReceiver);
         lbm.unregisterReceiver(downloadCompleteReceiver);
         lbm.unregisterReceiver(syncCommandReceiver);
         lbm.unregisterReceiver(reportCommandReceiver);
-//        lbm.unregisterReceiver(screenRegisteredReceiver);
+        lbm.unregisterReceiver(resetCommandReceiver);
 //        lbm.unregisterReceiver(screenRegisteredReceiver);
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -358,7 +363,7 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
         lbm.registerReceiver(syncCommandReceiver, new IntentFilter(ACTION_COMMAND_SYNC));
         lbm.registerReceiver(reportCommandReceiver, new IntentFilter(ACTION_COMMAND_REPORT));
-//        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+        lbm.registerReceiver(resetCommandReceiver, new IntentFilter(ACTION_COMMAND_RESET));
 //        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
     }
 
@@ -439,15 +444,9 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
 
     private void initServices(String screenId){
         if(querySchedulerService == null){
-            try {
-            // Append screenID to url
-            URL url = new URL("http://panel.tvoctopus.net/api/screen/"+screenId);
             //start scheduler service
             querySchedulerService = new Intent(FullscreenActivity.this, QuerySchedulerService.class);
-            querySchedulerService.putExtra("URL",url.toString());
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
+            querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, screenId);
         }
         if(weatherService == null){
             String city = "istanbul";
@@ -508,10 +507,15 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
     private void clearApplicationData(){
         playerFragment.stopPlayer();
         getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE).edit().clear().apply();
+        getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE).edit().clear().apply();
         getSharedPreferences(SHARED_PREF_PLAYLIST, Context.MODE_PRIVATE).edit().clear().apply();
-        File file = getExternalFilesDir("OctopusDownloads");
+        File file = getExternalFilesDir(DOWNLOAD_DIR);
         if (file != null) {
             deleteDirectory(file);
+        }
+        File file2 = getExternalFilesDir(DOWNLOAD_DIR_TEMP);
+        if (file2 != null) {
+            deleteDirectory(file2);
         }
     }
 
@@ -566,17 +570,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                 for(CommandData command : commands){
                     switch (command.getCommand()){
 
-                        case KEY_COMMANDS_REPORT:
-                            //process report command
-                            Reporter.getInstance(getApplicationContext()).reportDeviceStatus(viewModel.getScreenIdValue());
-                            break;
-
-                        case KEY_COMMANDS_RESET:
-                            Reporter.getInstance(getApplicationContext()).reportCommandStatus(command.getId(),"succeeded");
-                            clearApplicationData();
-                            finishAffinity();
-                            break;
-
                         case KEY_COMMANDS_TURN_ON_TV:
 
                             File file1 = new File("/sys/class/cec/cmd");
@@ -607,7 +600,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                             } else{
                                 if(playerFragment.isPlaying()){
                                     // if cec cmd not found we can stop playing media from player fragment
-
                                 }
                             }
                             break;
@@ -615,10 +607,6 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
                         case KEY_COMMANDS_SCREENSHOT:
                             //TODO: Implement sending screenshot.
 
-                            break;
-
-                        default:
-                            // do something
                             break;
                     }
                 }
@@ -778,16 +766,5 @@ public class FullscreenActivity extends AppCompatActivity implements ScreenListe
         }
     }
 
-    @Override
-    public void onScreenLocked() {
-        playerFragment.playlistWaited(true);
-        Log.d(TAG, "onScreenLocked: ");
-    }
-
-    @Override
-    public void onScreenAwake() {
-        playerFragment.playlistWaited(false);
-        Log.d(TAG, "onScreenAwake: ");
-    }
 }
 

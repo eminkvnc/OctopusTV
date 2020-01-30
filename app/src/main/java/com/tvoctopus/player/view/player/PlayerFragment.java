@@ -1,7 +1,10 @@
 package com.tvoctopus.player.view.player;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
@@ -65,6 +68,8 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
 
     private PlayerFragmentViewModel playerFragmentViewModel;
 
+    private BroadcastReceiver screenLockReceiver;
+
     public PlayerFragment() {
 
     }
@@ -75,6 +80,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         if(isPlaying){
             playlistWaited(true);
         }
+        context.unregisterReceiver(screenLockReceiver);
         //context.finishAffinity();
     }
 
@@ -84,6 +90,9 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         if(isPlaying){
             playlistWaited(false);
         }
+        IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
+        context.registerReceiver(screenLockReceiver, intentFilter2);
     }
 
     @Override
@@ -98,12 +107,35 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
 
         playerFragmentViewModel = new ViewModelProvider(this).get(PlayerFragmentViewModel.class);
 
+        updatedPlaylist = playerFragmentViewModel.getLastPlaylist();
+        playlist = playerFragmentViewModel.getLastPlaylist();
+
         playerFragmentViewModel.getNetworkConnected().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
                 isNetworkConnected = aBoolean;
             }
         });
+
+        playerFragmentViewModel.getPlaylist().observe(getViewLifecycleOwner(), new Observer<Playlist>() {
+            @Override
+            public void onChanged(Playlist mediaData) {
+
+            }
+        });
+
+        screenLockReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                    // do whatever you need to do here
+                    playlistWaited(true);
+                } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+                    // and do whatever you need to do here
+                    playlistWaited(false);
+                }
+            }
+        };
 
     }
 
@@ -126,8 +158,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         player.setRepeatMode(Player.REPEAT_MODE_ALL);
         playerView.setPlayer(player);
         downloadDir = context.getExternalFilesDir("OctopusDownloads");
-        updatedPlaylist = getLastPlaylist();
-        playlist = getLastPlaylist();
+
         return v;
     }
 
@@ -232,7 +263,7 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
             mediaIndex++;
         }
         updatedPlaylist = playlist;
-        this.playlist = getLastPlaylist();
+        this.playlist = playerFragmentViewModel.getLastPlaylist();
 
         isPlaylistUpdated = true;
     }

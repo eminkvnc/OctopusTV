@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 
 import com.tvoctopus.player.model.DataRepository;
+import com.tvoctopus.player.model.Playlist;
 
 public class PlayerFragmentViewModel extends AndroidViewModel {
 
@@ -20,6 +21,14 @@ public class PlayerFragmentViewModel extends AndroidViewModel {
 
     public MutableLiveData<Boolean> getNetworkConnected(){
         return dataRepository.getNetworkConnected();
+    }
+
+    public MutableLiveData<Playlist> getPlaylist(){
+        return dataRepository.getPlaylist();
+    }
+
+    public Playlist getLastPlaylist(){
+        return dataRepository.getLastPlaylist();
     }
 
 

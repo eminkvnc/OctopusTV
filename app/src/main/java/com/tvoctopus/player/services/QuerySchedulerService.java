@@ -23,6 +23,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import javax.net.ssl.HttpsURLConnection;
 import static com.tvoctopus.player.API.APIKeys.*;
+import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_SCREEN_ID_KEY;
 
 public class QuerySchedulerService extends Service {
 
@@ -43,6 +44,8 @@ public class QuerySchedulerService extends Service {
     public static final String PARAM_SCREEN_REGISTERED = "PARAM_SCREEN_REGISTERED";
     public static final String PARAM_COMMAND_DATA = "PARAM_COMMAND_DATA";
 
+    private final String urlString = "http://panel.tvoctopus.net/api/screen/";
+
     private URL url;
     private String result;
     private Timer timer;
@@ -57,7 +60,7 @@ public class QuerySchedulerService extends Service {
         new Thread(() -> {
             timer = new Timer();
             try {
-                url = new URL(intent.getStringExtra("URL"));
+                url = new URL(urlString+intent.getStringExtra(SHARED_PREF_SCREEN_ID_KEY));
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }

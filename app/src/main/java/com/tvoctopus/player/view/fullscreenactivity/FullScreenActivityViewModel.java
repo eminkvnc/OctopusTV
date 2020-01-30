@@ -4,14 +4,11 @@ import android.app.Application;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
-import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.tvoctopus.player.model.DataRepository;
 import com.tvoctopus.player.model.Playlist;
 import com.tvoctopus.player.model.ScreenConfig;
-import com.tvoctopus.player.model.StatusFlags;
-import com.tvoctopus.player.model.StatusFlagsLiveData;
 
 public class FullScreenActivityViewModel extends AndroidViewModel {
 
@@ -22,12 +19,12 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
         dataRepository = new DataRepository(application);
     }
 
-    public MediatorLiveData<StatusFlags> getStatusFlags(){
+    public MutableLiveData<Boolean> getNetworkConnected(){
+        return dataRepository.getNetworkConnected();
+    }
 
-        StatusFlagsLiveData statusFlagsLiveData =
-                new StatusFlagsLiveData(dataRepository.getNetworkConnected(), dataRepository.getScreenRegistered());
-        statusFlagsLiveData.setValue(new StatusFlags());
-        return statusFlagsLiveData;
+    public MutableLiveData<Boolean> getScreenRegistered(){
+        return dataRepository.getScreenRegistered();
     }
 
     public MutableLiveData<Playlist> getPlaylist(){
@@ -44,6 +41,10 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
 
     public int getScreenOrientationValue(){
         return dataRepository.getScreenOrientationValue();
+    }
+
+    public boolean getScreenRegisteredValue(){
+        return dataRepository.getScreenRegisteredValue();
     }
 
     public ScreenConfig getConfig(){

@@ -28,7 +28,7 @@ public class Downloader{
 
     public static final String MEDIA_DOWNLOAD_URL = "http://panel.tvoctopus.net/uploads/media/";
     public static final String DOWNLOAD_DIR = "OctopusDownloads";
-    public static final String DOWNLOAD_DIR_TEMP = "temp_OctopusDownloads";
+    public static final String DOWNLOAD_DIR_TEMP = "OctopusDownloads";
 
     public static final String ACTION_DOWNLOAD_FILE_COMPLETE = "ACTION_DOWNLOAD_FILE_COMPLETE";
     public static final String PARAM_DOWNLOAD_COMPLETE_STATUS = "PARAM_DOWNLOAD_COMPLETE_STATUS";

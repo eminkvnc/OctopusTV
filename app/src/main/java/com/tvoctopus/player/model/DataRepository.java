@@ -189,6 +189,11 @@ public class DataRepository {
         return sp.getInt(SHARED_PREF_SCREEN_ORIENTATION_KEY, -1);
     }
 
+    public boolean getScreenRegisteredValue(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
+        return sp.getBoolean(SHARED_PREF_SCREEN_REGISTERED_KEY, false);
+    }
+
     public ScreenConfig getScreenConfig(){
         ScreenConfig screenConfig = new ScreenConfig();
         screenConfig.setWidgetBarEnabled(getWidgetBarEnabled());
@@ -197,11 +202,10 @@ public class DataRepository {
         screenConfig.setWidgetBarPosition(getWidgetBarPosition());
         screenConfig.setWeatherEnabled(getWidgetWeatherEnabled());
         screenConfig.setRssEnabled(getWidgetRssEnabled());
-        screenConfig.setRssEnabled(getWidgetRssEnabled());
         return screenConfig;
     }
 
-    private Playlist getLastPlaylist(){
+    public Playlist getLastPlaylist(){
         SharedPreferences sp = application.getApplicationContext()
                 .getSharedPreferences(SHARED_PREF_PLAYLIST, Context.MODE_PRIVATE);
         Playlist playlist = new Playlist();
