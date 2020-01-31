@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -96,6 +95,10 @@ public class FullscreenActivity extends AppCompatActivity {
     private static final boolean AUTO_HIDE = true;
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
     private static final int UI_ANIMATION_DELAY = 100;
+
+    public static final String ACTION_WAITING = "ACTION_WAITING";
+    public static final String PARAM_WAITING = "PARAM_WAITING";
+
 
     private final Handler mHideHandler = new Handler();
     private RotateLayout mainFrame;
@@ -213,7 +216,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
         viewModel.getScreenRegistered().observe(this, screenRegistered -> {
             if(!screenRegistered){
-                generateAndShowQrCode();
+                showNetworkConnectionMessage();
             }
             //Screen registered cases
             else{
@@ -225,12 +228,6 @@ public class FullscreenActivity extends AppCompatActivity {
         });
 
         viewModel.getScreenId().observe(this, s -> querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, s));
-
-        viewModel.getPlaylist().observe(this, mediaData -> {
-            //TODO: Send Broadcast with playlistUpdated flag.
-            //  Receive data in PlayerFragment.
-
-        });
 
         viewModel.getConfig().getScreenOrientation().observe(this, this::rotateScreen);
 
@@ -246,10 +243,6 @@ public class FullscreenActivity extends AppCompatActivity {
             weatherService.putExtra(WEATHER_CITY_KEY,s);
             startService(weatherService);
         });
-
-        viewModel.getConfig().getWeatherEnabled().observe(this, aBoolean -> widgetFragment.setEnableWeather(aBoolean));
-
-        viewModel.getConfig().getRssEnabled().observe(this, aBoolean -> widgetFragment.setEnableRss(aBoolean));
 
         viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer, 15, 15));
 
@@ -292,7 +285,6 @@ public class FullscreenActivity extends AppCompatActivity {
                     clearApplicationData();
                     finishAffinity();
                 }
-
             }
         };
 
@@ -304,9 +296,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 if(allDownloadsComplete){
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_SUCCEEDED);
                     Playlist playlist = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
-                    Log.d(TAG, "onReceive: playlistSize: "+playlist.size());
                     viewModel.getPlaylist().postValue(playlist);
-                    playerFragment.playlistUpdated(playlist);
                     dismissGif();
                 } else {
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_INPROGRESS);
@@ -356,8 +346,20 @@ public class FullscreenActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        Intent intent = new Intent(ACTION_WAITING);
+        intent.putExtra(PARAM_WAITING,true);
+        sendBroadcast(intent);
+
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+        Intent intent = new Intent(ACTION_WAITING);
+        intent.putExtra(PARAM_WAITING,false);
+        sendBroadcast(intent);
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
         lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
         lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
@@ -434,12 +436,6 @@ public class FullscreenActivity extends AppCompatActivity {
         widgetFragment = new WidgetFragment();
         setFragment(playerFrame, playerFragment);
         setFragment(widgetFrame, widgetFragment);
-        Handler handler = new Handler();
-        handler.postDelayed(() -> {
-            setWidgetBarPosition(WidgetFragment.POSITION_RIGHT,15,15);
-            widgetFragment.setEnableRss(false);
-            widgetFragment.setEnableWeather(true);
-        },300);
     }
 
     private void initServices(String screenId){
@@ -523,7 +519,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
         switch (position){
             case POSITION_TOP:
-                widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
+//                widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
                 ConstraintLayout.LayoutParams paramsTop = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
                 paramsTop.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
                 paramsTop.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -533,7 +529,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 break;
             case WidgetFragment.POSITION_BOTTOM:
 
-                widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
+//                widgetFragment.setWidgetBarOrientation(LinearLayout.HORIZONTAL,widthPercentage,heightPercentage);
                 ConstraintLayout.LayoutParams paramsBottom = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
                 paramsBottom.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
                 paramsBottom.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -542,7 +538,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 widgetFrame.requestLayout();
                 break;
             case WidgetFragment.POSITION_LEFT:
-                widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
+//                widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
                 ConstraintLayout.LayoutParams paramsLeft = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
                 paramsLeft.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
                 paramsLeft.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -552,7 +548,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 break;
             case WidgetFragment.POSITION_RIGHT:
 
-                widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
+//                widgetFragment.setWidgetBarOrientation(LinearLayout.VERTICAL,widthPercentage,heightPercentage);
                 ConstraintLayout.LayoutParams paramsRight = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.MATCH_CONSTRAINT);
                 paramsRight.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
                 paramsRight.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -765,6 +761,5 @@ public class FullscreenActivity extends AppCompatActivity {
             handler.postDelayed(() -> doubleBackTab = false, 500);
         }
     }
-
 }
 

@@ -19,11 +19,6 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.tvoctopus.player.API.PlaylistListener;
-import com.tvoctopus.player.FirebaseHelper;
-import com.tvoctopus.player.R;
-import com.tvoctopus.player.model.MediaData;
-import com.tvoctopus.player.model.Playlist;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -32,13 +27,17 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.squareup.picasso.Picasso;
+import com.tvoctopus.player.API.PlaylistListener;
+import com.tvoctopus.player.FirebaseHelper;
+import com.tvoctopus.player.R;
+import com.tvoctopus.player.model.MediaData;
+import com.tvoctopus.player.model.Playlist;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.HashMap;
 
 public class PlayerFragment extends Fragment implements PlaylistListener {
 
@@ -119,8 +118,8 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
 
         playerFragmentViewModel.getPlaylist().observe(getViewLifecycleOwner(), new Observer<Playlist>() {
             @Override
-            public void onChanged(Playlist mediaData) {
-
+            public void onChanged(Playlist p) {
+                playlistUpdated(p);
             }
         });
 
@@ -253,15 +252,15 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
     @Override
     public void playlistUpdated(Playlist playlist){
         // Update SharedPreferences when playlist updated
-        SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
-        sp.edit().clear().apply();
-        int mediaIndex = 0;
-        for (MediaData media : playlist){
-            String playlistConcat;
-            playlistConcat = media.getName() + "%%%" + media.getType() + "%%%" + media.getMd5() + "%%%" + media.getTime();
-            sp.edit().putString(String.valueOf(mediaIndex), playlistConcat).apply();
-            mediaIndex++;
-        }
+//        SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
+//        sp.edit().clear().apply();
+//        int mediaIndex = 0;
+//        for (MediaData media : playlist){
+//            String playlistConcat;
+//            playlistConcat = media.getName() + "%%%" + media.getType() + "%%%" + media.getMd5() + "%%%" + media.getTime();
+//            sp.edit().putString(String.valueOf(mediaIndex), playlistConcat).apply();
+//            mediaIndex++;
+//        }
         updatedPlaylist = playlist;
         this.playlist = playerFragmentViewModel.getLastPlaylist();
 
@@ -286,25 +285,25 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         this.context = context;
     }
 
-    private Playlist getLastPlaylist(){
-        SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
-        Playlist playlist = new Playlist();
-        try {
-        HashMap<String, String> playlistMap = (HashMap<String, String>) sp.getAll();
-        for(int i = 0 ; i < playlistMap.size() ; i++){
-            String[] mediaData = playlistMap.get(String.valueOf(i)).split("%%%");
-            MediaData media = new MediaData(
-                    mediaData[0],
-                    mediaData[1],
-                    mediaData[2],
-                    mediaData[3]);
-            playlist.add(media);
-        }
-        }catch (NullPointerException e){
-            e.printStackTrace();
-        }
-        return playlist;
-    }
+//    private Playlist getLastPlaylist(){
+//        SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
+//        Playlist playlist = new Playlist();
+//        try {
+//        HashMap<String, String> playlistMap = (HashMap<String, String>) sp.getAll();
+//        for(int i = 0 ; i < playlistMap.size() ; i++){
+//            String[] mediaData = playlistMap.get(String.valueOf(i)).split("%%%");
+//            MediaData media = new MediaData(
+//                    mediaData[0],
+//                    mediaData[1],
+//                    mediaData[2],
+//                    mediaData[3]);
+//            playlist.add(media);
+//        }
+//        }catch (NullPointerException e){
+//            e.printStackTrace();
+//        }
+//        return playlist;
+//    }
 
     private void queueReport(MediaData mediaData){
         SharedPreferences sharedPreferences = context.getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);

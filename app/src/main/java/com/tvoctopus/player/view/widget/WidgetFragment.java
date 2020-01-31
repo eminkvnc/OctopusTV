@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.tvoctopus.player.API.JSonParser;
@@ -33,7 +34,7 @@ import java.util.HashMap;
 public class WidgetFragment extends Fragment {
 
 
-    HashMap<String, Integer> iconsMap = new HashMap<>();
+    private HashMap<String, Integer> iconsMap = new HashMap<>();
 
     public static final int POSITION_LEFT = 0;
     public static final int POSITION_RIGHT = 1;
@@ -44,10 +45,12 @@ public class WidgetFragment extends Fragment {
     private LinearLayout widgetLinearLayout;
     private LinearLayout weatherLinearLayout;
     private CardView weatherCardView;
-    private TextView weatherTempratureTextView;
+    private TextView weatherTemperatureTextView;
     private TextView weatherLocationTextView;
     private ImageView weatherIconImageView;
     private WebView rssWebView;
+
+    private WidgetFragmentViewModel viewModel;
 
     private BroadcastReceiver weatherReceiver;
 
@@ -81,6 +84,38 @@ public class WidgetFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
+        viewModel = new ViewModelProvider(this).get(WidgetFragmentViewModel.class);
+
+        viewModel.getConfig().getWeatherEnabled().observe(getViewLifecycleOwner(), weatherEnabled -> {
+            if(weatherEnabled){
+                weatherCardView.setVisibility(View.VISIBLE);
+            }else {
+                weatherCardView.setVisibility(View.GONE);
+            }
+        });
+
+        viewModel.getConfig().getRssEnabled().observe(getViewLifecycleOwner(), rssEnabled -> {
+            if(rssEnabled){
+                rssWebView.setVisibility(View.VISIBLE);
+            }else {
+                rssWebView.setVisibility(View.GONE);
+            }
+        });
+
+        viewModel.getConfig().getWidgetBarPosition().observe(getViewLifecycleOwner(), integer -> {
+            switch (integer){
+                case POSITION_TOP:
+                case WidgetFragment.POSITION_BOTTOM:
+                    setWidgetBarOrientation(LinearLayout.HORIZONTAL,15,15);
+                    break;
+                case WidgetFragment.POSITION_LEFT:
+                case WidgetFragment.POSITION_RIGHT:
+                    setWidgetBarOrientation(LinearLayout.VERTICAL,15,15);
+                    break;
+            }
+        });
+
+
         //TODO: Implement weather LiveData and post updated value.(Cache weather data)
         weatherReceiver = new BroadcastReceiver() {
             @Override
@@ -113,7 +148,7 @@ public class WidgetFragment extends Fragment {
         View weatherLayout = inflater.inflate(R.layout.widget_wheather,container,false);
         weatherLinearLayout = weatherLayout.findViewById(R.id.weather_linear_layout);
         weatherCardView = weatherLayout.findViewById(R.id.weather_card_view);
-        weatherTempratureTextView = weatherLayout.findViewById(R.id.weather_temprature_text_view);
+        weatherTemperatureTextView = weatherLayout.findViewById(R.id.weather_temprature_text_view);
         weatherLocationTextView = weatherLayout.findViewById(R.id.weather_location_text_view);
         weatherIconImageView = weatherLayout.findViewById(R.id.weather_icon_image_view);
 
@@ -156,7 +191,7 @@ public class WidgetFragment extends Fragment {
                 JSONObject jo = new JSONObject(data);
                 HashMap<String, String> weatherData = new JSonParser().parseWeatherData(jo);
                 int temperature = Double.valueOf(weatherData.get("temperature")).intValue();
-                weatherTempratureTextView.setText(String.valueOf(temperature));
+                weatherTemperatureTextView.setText(String.valueOf(temperature));
                 weatherLocationTextView.setText(weatherData.get("location"));
                 weatherIconImageView.setImageResource(iconsMap.get(weatherData.get("icon")));
             }
@@ -164,21 +199,5 @@ public class WidgetFragment extends Fragment {
             e.printStackTrace();
         }
     }
-
-    public void setEnableWeather(boolean isEnabled){
-        if(isEnabled){
-            weatherCardView.setVisibility(View.VISIBLE);
-        } else {
-            weatherCardView.setVisibility(View.GONE);
-        }
-    }
-
-    public void setEnableRss(boolean isEnabled){
-        if(isEnabled){
-            rssWebView.setVisibility(View.VISIBLE);
-        } else {
-            rssWebView.setVisibility(View.GONE);
-        }
-    }
-
 }
+

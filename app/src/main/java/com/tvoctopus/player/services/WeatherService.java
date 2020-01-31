@@ -1,12 +1,17 @@
 package com.tvoctopus.player.services;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,9 +41,35 @@ public class WeatherService extends Service {
     private String result;
     private Timer timer;
     private WeatherTask weatherTask;
+    private boolean isWaiting;
+    private BroadcastReceiver waitReceiver;
 
     public WeatherService() {
 
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        waitReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                    // do whatever you need to do here
+                    isWaiting = true;
+                } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+                    // and do whatever you need to do here
+                    isWaiting = false;
+                }
+                if(intent.getAction().equals(FullscreenActivity.ACTION_WAITING)){
+                    isWaiting = intent.getBooleanExtra(FullscreenActivity.PARAM_WAITING,true);
+                }
+            }
+        };
+        IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
+        intentFilter2.addAction(FullscreenActivity.ACTION_WAITING);
+        registerReceiver(waitReceiver,intentFilter2);
     }
 
     @Override
@@ -66,6 +97,7 @@ public class WeatherService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        unregisterReceiver(waitReceiver);
         if(weatherTask != null){
             weatherTask.cancel();
         }
@@ -85,31 +117,33 @@ public class WeatherService extends Service {
         @Override
         public void run() {
             //Query here!
-            try {
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                InputStream inputStream;
-                StringBuilder stringBuilder = new StringBuilder();
-                if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
-                    inputStream = connection.getInputStream();
-                    InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                    BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            if(!isWaiting){
+                try {
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    InputStream inputStream;
+                    StringBuilder stringBuilder = new StringBuilder();
+                    if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
+                        inputStream = connection.getInputStream();
+                        InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
-                    String data = bufferedReader.readLine();
-                    while (data != null){
-                        stringBuilder.append(data);
-                        data = bufferedReader.readLine();
+                        String data = bufferedReader.readLine();
+                        while (data != null){
+                            stringBuilder.append(data);
+                            data = bufferedReader.readLine();
+                        }
+                        connection.disconnect();
+                        result = stringBuilder.toString();
                     }
-                    connection.disconnect();
-                    result = stringBuilder.toString();
+                    Intent intent = new Intent();
+                    intent.setAction(ACTION_WEATHER_QUERY);
+                    intent.putExtra(PARAM_WEATHER_RESULT, result);
+                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                Intent intent = new Intent();
-                intent.setAction(ACTION_WEATHER_QUERY);
-                intent.putExtra(PARAM_WEATHER_RESULT, result);
-                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-            } catch (IOException e) {
-                e.printStackTrace();
+                Log.d(TAG, "run:Weather query works...");
             }
-            Log.d(TAG, "run:Weather query works...");
         }
     }
 }
