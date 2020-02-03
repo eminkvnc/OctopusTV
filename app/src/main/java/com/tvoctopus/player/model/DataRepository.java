@@ -39,8 +39,6 @@ public class DataRepository {
         firebaseHelper = FirebaseHelper.getInstance(application.getApplicationContext());
     }
 
-    //TODO: implement all SharedPreferences operations.
-
     public MutableLiveData<Boolean> getScreenRegistered(){
         SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
         return new SharedPreferenceLiveData<Boolean>(sp, SHARED_PREF_SCREEN_REGISTERED_KEY, false) {

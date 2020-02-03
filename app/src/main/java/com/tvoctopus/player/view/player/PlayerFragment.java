@@ -108,7 +108,6 @@ public class PlayerFragment extends Fragment {
 
         playerFragmentViewModel.getPlaylist().observe(getViewLifecycleOwner(), p -> {
 
-            //TODO: Check compare sharedPreferences playlist and directory data.
             if (playlist != null && p != null && !p.isEmpty() && !playlist.getMediaNames().containsAll(p.getMediaNames())){
                 isPlaylistUpdated = true;
                 playlist = p;
