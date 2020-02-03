@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.LayoutInflater;
@@ -16,8 +15,8 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
@@ -27,19 +26,17 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.squareup.picasso.Picasso;
-import com.tvoctopus.player.API.PlaylistListener;
-import com.tvoctopus.player.FirebaseHelper;
 import com.tvoctopus.player.R;
 import com.tvoctopus.player.model.MediaData;
 import com.tvoctopus.player.model.Playlist;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.tvoctopus.player.services.Downloader;
+import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
 import java.io.File;
 
-public class PlayerFragment extends Fragment implements PlaylistListener {
+import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
+
+public class PlayerFragment extends Fragment {
 
     public static final String TAG = "PlayerFragment";
 
@@ -52,7 +49,6 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
     private File downloadDir;
 
     private Playlist playlist;
-    private Playlist updatedPlaylist;
     private boolean loopInterrupt = false;
     private boolean isPlaylistUpdated = false;
     private boolean isNetworkConnected = false;
@@ -67,7 +63,8 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
 
     private PlayerFragmentViewModel playerFragmentViewModel;
 
-    private BroadcastReceiver screenLockReceiver;
+    private BroadcastReceiver waitReceiver;
+    private BroadcastReceiver updateReceiver;
 
     public PlayerFragment() {
 
@@ -76,22 +73,19 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
     @Override
     public void onPause() {
         super.onPause();
-        if(isPlaying){
-            playlistWaited(true);
-        }
-        context.unregisterReceiver(screenLockReceiver);
+        context.unregisterReceiver(waitReceiver);
+        LocalBroadcastManager.getInstance(context).unregisterReceiver(updateReceiver);
         //context.finishAffinity();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if(isPlaying){
-            playlistWaited(false);
-        }
         IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
         intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
-        context.registerReceiver(screenLockReceiver, intentFilter2);
+        intentFilter2.addAction(FullscreenActivity.ACTION_WAITING);
+        context.registerReceiver(waitReceiver, intentFilter2);
+        LocalBroadcastManager.getInstance(context).registerReceiver(updateReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
     }
 
     @Override
@@ -106,24 +100,41 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
 
         playerFragmentViewModel = new ViewModelProvider(this).get(PlayerFragmentViewModel.class);
 
-        updatedPlaylist = playerFragmentViewModel.getLastPlaylist();
         playlist = playerFragmentViewModel.getLastPlaylist();
 
-        playerFragmentViewModel.getNetworkConnected().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
-            @Override
-            public void onChanged(Boolean aBoolean) {
-                isNetworkConnected = aBoolean;
+        playerFragmentViewModel.getNetworkConnected().observe(getViewLifecycleOwner(), aBoolean -> {
+            isNetworkConnected = aBoolean;
+        });
+
+        playerFragmentViewModel.getPlaylist().observe(getViewLifecycleOwner(), p -> {
+
+            //TODO: Check compare sharedPreferences playlist and directory data.
+            if (playlist != null && p != null && !p.isEmpty() && !playlist.getMediaNames().containsAll(p.getMediaNames())){
+                isPlaylistUpdated = true;
+                playlist = p;
+            }
+
+            if(!isPlaying){
+                launchPlayer();
             }
         });
 
-        playerFragmentViewModel.getPlaylist().observe(getViewLifecycleOwner(), new Observer<Playlist>() {
+        updateReceiver = new BroadcastReceiver() {
             @Override
-            public void onChanged(Playlist p) {
-                playlistUpdated(p);
+            public void onReceive(Context context, Intent intent) {
+                boolean allDownloadsComplete = intent.getBooleanExtra(Downloader.PARAM_DOWNLOAD_COMPLETE_STATUS,false);
+                if(allDownloadsComplete){
+                    Playlist p = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
+                    if(playlist.getMediaNames().containsAll(p.getMediaNames())){
+                        removeTempFiles();
+                    }else{
+                        playerFragmentViewModel.getPlaylist().postValue(p);
+                    }
+                }
             }
-        });
+        };
 
-        screenLockReceiver = new BroadcastReceiver() {
+        waitReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
@@ -133,9 +144,11 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
                     // and do whatever you need to do here
                     playlistWaited(false);
                 }
+                if(intent.getAction().equals(FullscreenActivity.ACTION_WAITING)){
+                    playlistWaited(intent.getBooleanExtra(FullscreenActivity.PARAM_WAITING,true));
+                }
             }
         };
-
     }
 
     @Nullable
@@ -156,13 +169,13 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "octopus"));
         player.setRepeatMode(Player.REPEAT_MODE_ALL);
         playerView.setPlayer(player);
-        downloadDir = context.getExternalFilesDir("OctopusDownloads");
+        downloadDir = context.getExternalFilesDir(Downloader.DOWNLOAD_DIR);
 
         return v;
     }
 
     public void launchPlayer(){
-        if((!updatedPlaylist.isEmpty() || !playlist.isEmpty()) && downloadDir.list() != null){
+        if(!playlist.isEmpty() && downloadDir.list() != null){
             isPlaying = true;
             loopPlaylist(0L);
         }
@@ -176,20 +189,13 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
     private void loopPlaylist(Long delay){
 
         if(isPlaylistUpdated){
-            this.playlist = updatedPlaylist;
-            // Remove media from storage if deleted on API
-            String[] mediaFiles = downloadDir.list();
-            if (mediaFiles != null) {
-                for (String mediaFile : mediaFiles) {
-                    if (!playlist.getMediaNames().contains(mediaFile)) {
-                        File existingMediaFile = new File(downloadDir, mediaFile);
-                        existingMediaFile.delete();
-                    }
-                }
-            }
+            replaceMediaFiles();
             isPlaylistUpdated = false;
             currentMedia = playlist.get(0);
-            previousMedia = playlist.get(playlist.size()-1);
+            playlist.resetIndex();
+            if(playlistLooperHandler != null){
+                playlistLooperHandler.removeCallbacksAndMessages(null);
+            }
         }else{
             if(currentMedia != null){
                 previousMedia = currentMedia;
@@ -198,20 +204,12 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         }
         playlistStartTime = System.currentTimeMillis();
 
-
         playlistLooperRunnable = () -> {
             currentMedia.setStartTime(System.currentTimeMillis());
             if(previousMedia != null){
                 previousMedia.setStopTime(System.currentTimeMillis());
                 if(previousMedia.getStartTime() != -1 && previousMedia.getStopTime() != -1){
-                    //TODO: Implement network connection check in firebase service. Don't use network status in PlayerFragment.
-                    //
-                    FirebaseHelper firebaseHelper = FirebaseHelper.getInstance();
-                    if(isNetworkConnected){
-                        firebaseHelper.addMediaData(previousMedia);
-                    } else{
-                        queueReport(previousMedia);
-                    }
+                    playerFragmentViewModel.reportMediaData(previousMedia, isNetworkConnected);
                 }
             }
             if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
@@ -243,36 +241,39 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
             playlistLooperHandler = new Handler();
             playlistLooperHandler.postDelayed(playlistLooperRunnable,delay);
         });
-
-        // TODO: Report media data to server.
     }
 
+    // Remove media from storage if deleted on API
+    private void replaceMediaFiles(){
+        String[] mediaFiles = downloadDir.list();
+        if (mediaFiles != null) {
+            for (String mediaFile : mediaFiles) {
+                File file = new File(downloadDir, mediaFile);
+                String nameWithoutPrefix = mediaFile.substring(Downloader.DOWNLOAD_FILE_PREFIX.length());
+                if (playlist.getMediaNames().contains(nameWithoutPrefix)) {
+                    file.renameTo(new File(downloadDir, nameWithoutPrefix));
+                }
+                else {
+                    file.delete();
+                }
+            }
+        }
+    }
 
-    //TODO: Update OctopusDownloads dir with temp_OctopusDownloads dir when current media finished.
-    @Override
-    public void playlistUpdated(Playlist playlist){
-        // Update SharedPreferences when playlist updated
-//        SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
-//        sp.edit().clear().apply();
-//        int mediaIndex = 0;
-//        for (MediaData media : playlist){
-//            String playlistConcat;
-//            playlistConcat = media.getName() + "%%%" + media.getType() + "%%%" + media.getMd5() + "%%%" + media.getTime();
-//            sp.edit().putString(String.valueOf(mediaIndex), playlistConcat).apply();
-//            mediaIndex++;
-//        }
-        updatedPlaylist = playlist;
-        this.playlist = playerFragmentViewModel.getLastPlaylist();
-
-        isPlaylistUpdated = true;
+    private void removeTempFiles(){
+        String[] mediaFiles = downloadDir.list();
+        if (mediaFiles != null) {
+            for (String mediaFile : mediaFiles) {
+                if (mediaFile.startsWith(Downloader.DOWNLOAD_FILE_PREFIX)) {
+                    File file = new File(downloadDir, mediaFile);
+                    file.delete();
+                }
+            }
+        }
     }
 
     public boolean isPlaying() {
         return isPlaying;
-    }
-
-    public void setPlaying(boolean playing) {
-        isPlaying = playing;
     }
 
     @Nullable
@@ -285,73 +286,11 @@ public class PlayerFragment extends Fragment implements PlaylistListener {
         this.context = context;
     }
 
-//    private Playlist getLastPlaylist(){
-//        SharedPreferences sp = context.getSharedPreferences("Playlist", Context.MODE_PRIVATE);
-//        Playlist playlist = new Playlist();
-//        try {
-//        HashMap<String, String> playlistMap = (HashMap<String, String>) sp.getAll();
-//        for(int i = 0 ; i < playlistMap.size() ; i++){
-//            String[] mediaData = playlistMap.get(String.valueOf(i)).split("%%%");
-//            MediaData media = new MediaData(
-//                    mediaData[0],
-//                    mediaData[1],
-//                    mediaData[2],
-//                    mediaData[3]);
-//            playlist.add(media);
-//        }
-//        }catch (NullPointerException e){
-//            e.printStackTrace();
-//        }
-//        return playlist;
-//    }
-
-    private void queueReport(MediaData mediaData){
-        SharedPreferences sharedPreferences = context.getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);
-
-        try {
-            JSONObject jo = mediaData.toJson();
-            JSONArray ja;
-            if (sharedPreferences.contains("queue")) {
-                String queueString = sharedPreferences.getString("queue", "");
-                ja = new JSONArray(queueString);
-            } else {
-                ja = new JSONArray();
-            }
-            ja.put(jo);
-            sharedPreferences.edit().putString("queue", ja.toString()).apply();
-        } catch (JSONException e){
-            e.printStackTrace();
-        }
-    }
-
-    private void executeQueueReport(){
-
-        SharedPreferences sharedPreferences = context.getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);
-        try {
-            JSONArray ja;
-            if (sharedPreferences.contains("queue")) {
-                String queueString = sharedPreferences.getString("queue", "");
-                ja = new JSONArray(queueString);
-                FirebaseHelper firebaseHelper = FirebaseHelper.getInstance();
-                for(int i = 0; i < ja.length(); i++){
-                    firebaseHelper.addMediaData(new MediaData(ja.getJSONObject(i)));
-                }
-                sharedPreferences.edit().remove("queue").apply();
-            }
-
-        } catch (JSONException e){
-            e.printStackTrace();
-        }
-
-    }
-
-
     private Long playlistStopTime;
     private Long playlistStartTime;
     private Long playlistRemainingTime;
 
     //TODO: Report mediaData to server when media paused and played again.
-    @Override
     public void playlistWaited(boolean isWaiting) {
         if(isWaiting){
             if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){

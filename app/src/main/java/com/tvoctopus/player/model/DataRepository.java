@@ -6,6 +6,12 @@ import android.content.SharedPreferences;
 
 import androidx.lifecycle.MutableLiveData;
 
+import com.tvoctopus.player.FirebaseHelper;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,6 +21,7 @@ public class DataRepository {
     public static final String SHARED_PREF_CONFIG = "Config";
     public static final String SHARED_PREF_PLAYLIST = "Playlist";
     public static final String SHARED_PREF_PLAYLIST_KEY = "PlaylistKey";
+    public static final String SHARED_PREF_CURRENT_MEDIA_KEY = "CurrentMedia";
     public static final String SHARED_PREF_SCREEN_REGISTERED_KEY = "ScreenRegistered";
     public static final String SHARED_PREF_SCREEN_ID_KEY = "screenID";
     public static final String SHARED_PREF_WIDGET_WEATHER_CITY_KEY = "weatherCity";
@@ -25,9 +32,11 @@ public class DataRepository {
     public static final String SHARED_PREF_SCREEN_ORIENTATION_KEY = "ScreenOrientation";
 
     private Application application;
+    private FirebaseHelper firebaseHelper;
 
     public DataRepository(Application application) {
         this.application = application;
+        firebaseHelper = FirebaseHelper.getInstance(application.getApplicationContext());
     }
 
     //TODO: implement all SharedPreferences operations.
@@ -226,5 +235,54 @@ public class DataRepository {
             e.printStackTrace();
         }
         return playlist;
+    }
+
+    public void reportMediaData(MediaData mediaData, boolean networkConnected){
+        if(networkConnected){
+            executeQueueReport();
+            firebaseHelper.addMediaData(mediaData);
+        } else {
+            queueReport(mediaData);
+        }
+    }
+
+    private void executeQueueReport(){
+
+        SharedPreferences sharedPreferences = application.getApplicationContext()
+                .getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);
+        try {
+            JSONArray ja;
+            if (sharedPreferences.contains("queue")) {
+                String queueString = sharedPreferences.getString("queue", "");
+                ja = new JSONArray(queueString);
+                for(int i = 0; i < ja.length(); i++){
+                    firebaseHelper.addMediaData(new MediaData(ja.getJSONObject(i)));
+                }
+                sharedPreferences.edit().remove("queue").apply();
+            }
+
+        } catch (JSONException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void queueReport(MediaData mediaData){
+        SharedPreferences sharedPreferences = application.getApplicationContext()
+                .getSharedPreferences("ReportQueue", Context.MODE_PRIVATE);
+
+        try {
+            JSONObject jo = mediaData.toJson();
+            JSONArray ja;
+            if (sharedPreferences.contains("queue")) {
+                String queueString = sharedPreferences.getString("queue", "");
+                ja = new JSONArray(queueString);
+            } else {
+                ja = new JSONArray();
+            }
+            ja.put(jo);
+            sharedPreferences.edit().putString("queue", ja.toString()).apply();
+        } catch (JSONException e){
+            e.printStackTrace();
+        }
     }
 }

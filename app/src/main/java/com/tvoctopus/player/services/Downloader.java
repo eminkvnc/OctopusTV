@@ -28,7 +28,7 @@ public class Downloader{
 
     public static final String MEDIA_DOWNLOAD_URL = "http://panel.tvoctopus.net/uploads/media/";
     public static final String DOWNLOAD_DIR = "OctopusDownloads";
-    public static final String DOWNLOAD_DIR_TEMP = "OctopusDownloads";
+    public static final String DOWNLOAD_FILE_PREFIX = "_temp_";
 
     public static final String ACTION_DOWNLOAD_FILE_COMPLETE = "ACTION_DOWNLOAD_FILE_COMPLETE";
     public static final String PARAM_DOWNLOAD_COMPLETE_STATUS = "PARAM_DOWNLOAD_COMPLETE_STATUS";
@@ -65,7 +65,8 @@ public class Downloader{
                         DownloadManager.STATUS_PENDING |
                         DownloadManager.STATUS_RUNNING);
                 Cursor cursor = downloadManager.query(query);
-                if (cursor != null && cursor.getCount() > 0) {
+                downloadMap.remove(downloadId);
+                if (downloadMap.size() > 0) {
                     Intent i = new Intent(ACTION_DOWNLOAD_FILE_COMPLETE);
                     i.putExtra(PARAM_DOWNLOAD_COMPLETE_STATUS,false);
                     i.putExtra(PARAM_DOWNLOAD_COMMAND_ID, commandId);
@@ -80,7 +81,7 @@ public class Downloader{
                     LocalBroadcastManager.getInstance(context).sendBroadcast(i);
                     Log.d(TAG, "Broadcast from Downloader with action: "+ACTION_DOWNLOAD_FILE_COMPLETE);
                 }
-                downloadMap.remove(downloadId);
+
             }
         };
         Log.d(TAG, "Downloader: constructor");
@@ -121,7 +122,7 @@ public class Downloader{
                         .setAllowedOverRoaming(false)
                         .setTitle(fileName)
                         .setDescription(context.getResources().getString(R.string.downloader_notification_media_downloading))
-                        .setDestinationInExternalFilesDir(context, DOWNLOAD_DIR_TEMP, fileName)
+                        .setDestinationInExternalFilesDir(context, DOWNLOAD_DIR, DOWNLOAD_FILE_PREFIX+fileName)
                         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE));
                 Log.d(getClass().getName(), "startDownload: "+DOWNLOAD_DIR+"/"+fileName);
                 downloadMap.put(lastDownload, fileName);

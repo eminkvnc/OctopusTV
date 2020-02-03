@@ -39,6 +39,9 @@ public class Playlist extends ArrayList<MediaData> implements Parcelable {
             return get(0);
         }
     }
+    public MediaData getCurrent(){
+        return get(index);
+    }
 
     public boolean isLast(){
         return (index == size() - 1);

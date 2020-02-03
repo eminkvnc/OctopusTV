@@ -42,7 +42,6 @@ import com.tvoctopus.player.GifDialog;
 import com.tvoctopus.player.R;
 import com.tvoctopus.player.ShellExecutor;
 import com.tvoctopus.player.model.CommandData;
-import com.tvoctopus.player.model.Playlist;
 import com.tvoctopus.player.services.Downloader;
 import com.tvoctopus.player.services.QuerySchedulerService;
 import com.tvoctopus.player.services.Reporter;
@@ -77,8 +76,6 @@ import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_PLAYLIST;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_SCREEN_ID_KEY;
 import static com.tvoctopus.player.services.Downloader.DOWNLOAD_DIR;
-import static com.tvoctopus.player.services.Downloader.DOWNLOAD_DIR_TEMP;
-import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_REPORT;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_RESET;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_SYNC;
@@ -199,18 +196,11 @@ public class FullscreenActivity extends AppCompatActivity {
                 dismissMessages();
                 startServices();
 
-                if (playerFragment != null && !playerFragment.isPlaying()) {
-                    playerFragment.launchPlayer();
-                }
-
             }
             if(!networkConnected && screenRegistered){
                 dismissMessages();
                 stopServices();
 
-                if (playerFragment != null && !playerFragment.isPlaying()) {
-                    playerFragment.launchPlayer();
-                }
             }
         });
 
@@ -221,9 +211,6 @@ public class FullscreenActivity extends AppCompatActivity {
             //Screen registered cases
             else{
                 dismissMessages();
-                if (playerFragment != null && !playerFragment.isPlaying()) {
-                    playerFragment.launchPlayer();
-                }
             }
         });
 
@@ -295,8 +282,6 @@ public class FullscreenActivity extends AppCompatActivity {
                 String commandId = intent.getStringExtra(Downloader.PARAM_DOWNLOAD_COMMAND_ID);
                 if(allDownloadsComplete){
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_SUCCEEDED);
-                    Playlist playlist = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
-                    viewModel.getPlaylist().postValue(playlist);
                     dismissGif();
                 } else {
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_INPROGRESS);
@@ -509,10 +494,10 @@ public class FullscreenActivity extends AppCompatActivity {
         if (file != null) {
             deleteDirectory(file);
         }
-        File file2 = getExternalFilesDir(DOWNLOAD_DIR_TEMP);
-        if (file2 != null) {
-            deleteDirectory(file2);
-        }
+//        File file2 = getExternalFilesDir(DOWNLOAD_DIR_TEMP);
+//        if (file2 != null) {
+//            deleteDirectory(file2);
+//        }
     }
 
     public void setWidgetBarPosition(int position, int widthPercentage, int heightPercentage){
@@ -577,9 +562,9 @@ public class FullscreenActivity extends AppCompatActivity {
                                 ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand);
                                 shellExecutorOn.start();
                             } else{
-                                if(!playerFragment.isPlaying()){
-                                    playerFragment.launchPlayer();
-                                }
+//                                if(!playerFragment.isPlaying()){
+//                                    playerFragment.launchPlayer();
+//                                }
                             }
                             break;
 
