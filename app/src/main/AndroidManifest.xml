@@ -20,7 +20,7 @@
     <application
         android:name="com.tvoctopus.player.OctopusApplication"
         android:allowBackup="true"
-        android:banner="@drawable/ic_octopus_logo"
+        android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -58,6 +58,7 @@
         <service android:name="com.tvoctopus.player.RestartService" />
         <service android:name="com.tvoctopus.player.API.QuerySchedulerService" />
         <service android:name="com.tvoctopus.player.WeatherService" />
+        <service android:name="com.tvoctopus.player.API.Downloader" />
 
         <meta-data
             android:name="preloaded_fonts"

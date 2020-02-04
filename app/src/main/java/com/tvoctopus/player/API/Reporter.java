@@ -116,6 +116,7 @@ public class Reporter {
                 joStatus.put("mac",macAddress);
                 joStatus.put("cec",cecStatus);
                 joStatus.put("wifi_name",wifiSSID);
+                joStatus.put("net","wlan0");
                 joStatus.put("tv_status","on");
 
                 JSONObject joData = new JSONObject();
