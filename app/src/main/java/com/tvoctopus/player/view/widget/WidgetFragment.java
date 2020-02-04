@@ -24,6 +24,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.tvoctopus.player.API.JSonParser;
 import com.tvoctopus.player.R;
+import com.tvoctopus.player.model.WeatherData;
 import com.tvoctopus.player.services.WeatherService;
 
 import org.json.JSONException;
@@ -189,11 +190,11 @@ public class WidgetFragment extends Fragment {
         try {
             if (data != null) {
                 JSONObject jo = new JSONObject(data);
-                HashMap<String, String> weatherData = new JSonParser().parseWeatherData(jo);
-                int temperature = Double.valueOf(weatherData.get("temperature")).intValue();
+                WeatherData weatherData = new JSonParser().parseWeatherData(jo);
+                int temperature = Double.valueOf(weatherData.getMain().getTemp()).intValue();
                 weatherTemperatureTextView.setText(String.valueOf(temperature));
-                weatherLocationTextView.setText(weatherData.get("location"));
-                weatherIconImageView.setImageResource(iconsMap.get(weatherData.get("icon")));
+                weatherLocationTextView.setText(weatherData.getName());
+                weatherIconImageView.setImageResource(iconsMap.get(weatherData.getWeather().get(0).getIcon()));
             }
         } catch (JSONException | NullPointerException e) {
             e.printStackTrace();

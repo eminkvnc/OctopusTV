@@ -117,6 +117,7 @@ public class Reporter {
                 joStatus.put("ip",ipAddress);
                 joStatus.put("mac",macAddress);
                 joStatus.put("cec",cecStatus);
+                joStatus.put("net","wlan0");
                 joStatus.put("wifi_name",wifiSSID);
                 joStatus.put("tv_status","on");
 

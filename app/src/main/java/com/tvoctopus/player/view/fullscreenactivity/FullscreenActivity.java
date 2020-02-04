@@ -174,6 +174,8 @@ public class FullscreenActivity extends AppCompatActivity {
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
         mainFrame.setOnClickListener(view -> toggle());
 
+        findViewById(R.id.subtitle_tv).setSelected(true);
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         viewModel = new ViewModelProvider(this).get(FullScreenActivityViewModel.class);
