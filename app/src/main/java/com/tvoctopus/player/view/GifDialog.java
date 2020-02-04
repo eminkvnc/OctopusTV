@@ -1,4 +1,4 @@
-package com.tvoctopus.player;
+package com.tvoctopus.player.view;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.DrawableImageViewTarget;
+import com.tvoctopus.player.R;
 
 public class GifDialog extends Dialog {
     private ImageView imageView;

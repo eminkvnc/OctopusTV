@@ -1,13 +1,8 @@
-package com.tvoctopus.player.API;
+package com.tvoctopus.player.model;
 
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.tvoctopus.player.model.CommandData;
-import com.tvoctopus.player.model.DayOptions;
-import com.tvoctopus.player.model.MediaData;
-import com.tvoctopus.player.model.Playlist;
-import com.tvoctopus.player.model.WeatherData;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -16,30 +11,30 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMAND;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_REPORT;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_SYNC;
-import static com.tvoctopus.player.API.APIKeys.KEY_ERROR;
-import static com.tvoctopus.player.API.APIKeys.KEY_MESSAGE;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_IS_MASTER;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_MASTER;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_ORIENTATION;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_PLAYLIST;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_MD5;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_NAME;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_TIME;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_TYPE;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_SCHEDULE;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_WIFI_COUNTRY;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_WIFI_PASSWORD;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_WIFI_SSID;
-import static com.tvoctopus.player.API.APIKeys.KEY_UUID;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMAND;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_REPORT;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_SYNC;
+import static com.tvoctopus.player.model.APIKeys.KEY_ERROR;
+import static com.tvoctopus.player.model.APIKeys.KEY_MESSAGE;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_IS_MASTER;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_MASTER;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_ORIENTATION;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_PLAYLIST;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_MD5;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_NAME;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_TIME;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_PLAYLIST_MEDIA_TYPE;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_SCHEDULE;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_WIFI_COUNTRY;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_WIFI_PASSWORD;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_WIFI_SSID;
+import static com.tvoctopus.player.model.APIKeys.KEY_UUID;
 
 public class JSonParser {
 

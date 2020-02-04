@@ -58,7 +58,6 @@
         <service android:name="com.tvoctopus.player.services.RestartService" />
         <service android:name="com.tvoctopus.player.services.QuerySchedulerService" />
         <service android:name="com.tvoctopus.player.services.WeatherService" />
-        <service android:name="com.tvoctopus.player.services.Downloader" />
 
         <meta-data
             android:name="preloaded_fonts"

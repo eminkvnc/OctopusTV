@@ -11,7 +11,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.tvoctopus.player.API.JSonParser;
+import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.model.CommandData;
 import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
@@ -31,13 +31,13 @@ import java.util.TimerTask;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_REBOOT;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_REPORT;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_RESET;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_SCREENSHOT;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_SYNC;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_REBOOT;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_REPORT;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_RESET;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_SCREENSHOT;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_SYNC;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_TURN_ON_TV;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_SCREEN_ID_KEY;
 
 public class QuerySchedulerService extends Service {

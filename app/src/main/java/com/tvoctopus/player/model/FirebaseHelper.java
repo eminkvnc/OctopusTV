@@ -1,4 +1,4 @@
-package com.tvoctopus.player;
+package com.tvoctopus.player.model;
 
 import android.content.Context;
 import android.util.Log;
@@ -10,7 +10,6 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.tvoctopus.player.model.MediaData;
 
 import java.util.UUID;
 

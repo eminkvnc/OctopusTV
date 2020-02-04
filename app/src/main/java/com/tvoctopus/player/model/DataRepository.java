@@ -6,8 +6,6 @@ import android.content.SharedPreferences;
 
 import androidx.lifecycle.MutableLiveData;
 
-import com.tvoctopus.player.FirebaseHelper;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

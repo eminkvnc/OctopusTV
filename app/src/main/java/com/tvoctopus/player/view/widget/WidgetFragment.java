@@ -22,7 +22,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.tvoctopus.player.API.JSonParser;
+import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.R;
 import com.tvoctopus.player.model.WeatherData;
 import com.tvoctopus.player.services.WeatherService;

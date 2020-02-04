@@ -36,12 +36,11 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.github.rongi.rotate_layout.layout.RotateLayout;
 import com.google.zxing.WriterException;
-import com.tvoctopus.player.API.APIKeys;
-import com.tvoctopus.player.API.JSonParser;
-import com.tvoctopus.player.GifDialog;
+import com.tvoctopus.player.view.GifDialog;
 import com.tvoctopus.player.R;
-import com.tvoctopus.player.ShellExecutor;
+import com.tvoctopus.player.utils.ShellExecutor;
 import com.tvoctopus.player.model.CommandData;
+import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.services.Downloader;
 import com.tvoctopus.player.services.QuerySchedulerService;
 import com.tvoctopus.player.services.Reporter;
@@ -60,17 +59,20 @@ import java.util.UUID;
 import androidmads.library.qrgenearator.QRGContents;
 import androidmads.library.qrgenearator.QRGEncoder;
 
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_SCREENSHOT;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
-import static com.tvoctopus.player.API.APIKeys.KEY_COMMANDS_TURN_ON_TV;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
-import static com.tvoctopus.player.API.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
-import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_0;
-import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_180;
-import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_270;
-import static com.tvoctopus.player.API.APIKeys.KEY_VALUES_ROTATION_90;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_SCREENSHOT;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
+import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_TURN_ON_TV;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_ORIENTATION;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_RIGHT;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_TOP;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_WIFI_PASSWORD;
+import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_WIFI_SSID;
+import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_0;
+import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_180;
+import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_270;
+import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_90;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_CONFIG;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_PLAYLIST;
@@ -704,10 +706,10 @@ public class FullscreenActivity extends AppCompatActivity {
 
         //TODO: Implement caption fragment. Implement recyclerView endless loop.
         // Parse caption data from API.
-        String captionText = (String) commandData.getMetaData().get(APIKeys.KEY_PARAMS_WIFI_PASSWORD);
+        String captionText = (String) commandData.getMetaData().get(KEY_PARAMS_WIFI_PASSWORD);
         viewModel.getCaptionData().postValue(captionText);
 
-        String orientationString = (String)commandData.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
+        String orientationString = (String)commandData.getMetaData().get(KEY_PARAMS_ORIENTATION);
         if (orientationString != null){
             int orientation = Integer.parseInt(orientationString);
             viewModel.getConfig().getScreenOrientation().postValue(orientation);
@@ -717,7 +719,7 @@ public class FullscreenActivity extends AppCompatActivity {
         // available for widgets.
         // (temporarily used wifi-SSID and overscan metadata fields. Percentage not handled yet.)
         HashMap<String, Object> hashMap = commandData.getMetaData();
-        String cityKey = (String) hashMap.get(APIKeys.KEY_PARAMS_WIFI_SSID);
+        String cityKey = (String) hashMap.get(KEY_PARAMS_WIFI_SSID);
         viewModel.getConfig().getWeatherCity().postValue(cityKey);
 
         int widgetBarPosition = -1;

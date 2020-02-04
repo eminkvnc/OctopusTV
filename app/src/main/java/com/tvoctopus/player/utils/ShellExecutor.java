@@ -1,4 +1,4 @@
-package com.tvoctopus.player;
+package com.tvoctopus.player.utils;
 
 import android.util.Log;
 import java.io.BufferedReader;
