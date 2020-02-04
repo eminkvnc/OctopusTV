@@ -101,10 +101,13 @@ public class FullscreenActivity extends AppCompatActivity {
     private RotateLayout mainFrame;
     private FrameLayout playerFrame;
     private FrameLayout widgetFrame;
+    private FrameLayout captionFrame;
     private PlayerFragment playerFragment;
     private WidgetFragment widgetFragment;
 
-    private TextView textView;
+
+    private TextView captionTextView;
+    private TextView messageTextView;
     private ImageView qrImageView;
     private GifDialog gifDialog;
     private Activity activity;
@@ -166,15 +169,19 @@ public class FullscreenActivity extends AppCompatActivity {
         gifDialog = new GifDialog(FullscreenActivity.this);
         playerFrame = findViewById(R.id.player_frame);
         widgetFrame = findViewById(R.id.widgets_frame);
+        captionFrame = findViewById(R.id.caption_frame);
+
         qrImageView = findViewById(R.id.qr_code_imageView);
-        textView = findViewById(R.id.textView);
-        textView.setTextColor(Color.WHITE);
+        messageTextView = findViewById(R.id.textView);
+        messageTextView.setTextColor(Color.WHITE);
 
         mainFrame = findViewById(R.id.main_frame);
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
         mainFrame.setOnClickListener(view -> toggle());
 
-        findViewById(R.id.subtitle_tv).setSelected(true);
+        captionTextView = findViewById(R.id.caption_tv);
+        captionTextView.setSelected(true);
+
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -234,6 +241,8 @@ public class FullscreenActivity extends AppCompatActivity {
         });
 
         viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer, 15, 15));
+
+        viewModel.getCaptionData().observe(this, s -> captionTextView.setText(s));
 
         screenRegisteredReceiver = new BroadcastReceiver() {
             @Override
@@ -520,7 +529,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 ConstraintLayout.LayoutParams paramsBottom = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_CONSTRAINT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
                 paramsBottom.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
                 paramsBottom.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-                paramsBottom.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+                paramsBottom.bottomToTop = R.id.caption_frame;
                 widgetFrame.setLayoutParams(paramsBottom);
                 widgetFrame.requestLayout();
                 break;
@@ -631,24 +640,24 @@ public class FullscreenActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + id;
             widgetFrame.setVisibility(View.GONE);
-            textView.setText(firstMessage);
+            messageTextView.setText(firstMessage);
             qrImageView.setImageBitmap(qrBitmap);
-            textView.setVisibility(View.VISIBLE);
+            messageTextView.setVisibility(View.VISIBLE);
             qrImageView.setVisibility(View.VISIBLE);
         });
     }
 
     public void showNetworkConnectionMessage(){
         runOnUiThread(() -> {
-            textView.setText(getResources().getString(R.string.fullscreen_activity_connect_network_textview));
+            messageTextView.setText(getResources().getString(R.string.fullscreen_activity_connect_network_textview));
             qrImageView.setImageResource(R.drawable.ic_octopus_logo);
-            textView.setVisibility(View.VISIBLE);
+            messageTextView.setVisibility(View.VISIBLE);
             qrImageView.setVisibility(View.VISIBLE);
         });
     }
 
     public void dismissMessages(){
-        textView.setVisibility(View.GONE);
+        messageTextView.setVisibility(View.GONE);
         qrImageView.setVisibility(View.GONE);
     }
 
@@ -692,6 +701,11 @@ public class FullscreenActivity extends AppCompatActivity {
     }
 
     private void applyConfigurations(CommandData commandData){
+
+        //TODO: Implement caption fragment. Implement recyclerView endless loop.
+        // Parse caption data from API.
+        String captionText = (String) commandData.getMetaData().get(APIKeys.KEY_PARAMS_WIFI_PASSWORD);
+        viewModel.getCaptionData().postValue(captionText);
 
         String orientationString = (String)commandData.getMetaData().get(APIKeys.KEY_PARAMS_ORIENTATION);
         if (orientationString != null){

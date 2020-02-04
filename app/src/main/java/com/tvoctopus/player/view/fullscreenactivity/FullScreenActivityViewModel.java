@@ -35,6 +35,10 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
         return dataRepository.getScreenId();
     }
 
+    public MutableLiveData<String> getCaptionData(){
+        return dataRepository.getCaptionData();
+    }
+
     public String getScreenIdValue(){
         return dataRepository.getScreenIdValue();
     }

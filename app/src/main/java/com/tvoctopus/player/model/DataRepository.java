@@ -30,6 +30,7 @@ public class DataRepository {
     public static final String SHARED_PREF_WIDGET_RSS_ENABLED_KEY = "rssEnabled";
     public static final String SHARED_PREF_WIDGET_BAR_ENABLED_KEY = "widgetBarEnabled";
     public static final String SHARED_PREF_SCREEN_ORIENTATION_KEY = "ScreenOrientation";
+    public static final String SHARED_PREF_CAPTION_DATA_KEY = "CaptionData";
 
     private Application application;
     private FirebaseHelper firebaseHelper;
@@ -65,6 +66,21 @@ public class DataRepository {
             @Override
             public void setAndPostValue(String value) {
                 sp.edit().putString(SHARED_PREF_SCREEN_ID_KEY, value).apply();
+            }
+        };
+    }
+
+    public MutableLiveData<String> getCaptionData(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<String>(sp, SHARED_PREF_CAPTION_DATA_KEY, null) {
+            @Override
+            String getValueFromPreferences(String key, String defValue) {
+                return sp.getString(key, defValue);
+            }
+
+            @Override
+            public void setAndPostValue(String value) {
+                sp.edit().putString(SHARED_PREF_CAPTION_DATA_KEY, value).apply();
             }
         };
     }

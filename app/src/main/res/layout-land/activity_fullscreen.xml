@@ -2,6 +2,7 @@
 <com.github.rongi.rotate_layout.layout.RotateLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/main_frame">
@@ -28,7 +29,7 @@
             android:layout_height="0dp"
             android:background="#33000000"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/caption_frame"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
@@ -58,18 +59,31 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <TextView
-            android:id="@+id/subtitle_tv"
-
+        <FrameLayout
+            android:id="@+id/caption_frame"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:scrollHorizontally="true"
-            android:singleLine="true"
-            android:text="TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView TextView"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
+            android:background="#66000000"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent">
+
+            <TextView
+                android:id="@+id/caption_tv"
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="marquee"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:marqueeRepeatLimit="-1"
+                android:scrollHorizontally="true"
+                android:singleLine="true"
+
+                android:textColor="#FFFFFF"
+                android:textSize="16sp" />
+
+        </FrameLayout>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.github.rongi.rotate_layout.layout.RotateLayout>
