@@ -18,7 +18,7 @@ public class CommandData implements Parcelable {
     private JSONObject params;
 
     private Playlist playlist;
-    private HashMap<Integer, DayOptions> daySchedule;
+    private HashMap<Integer, DayStatus> dayStatus;
     private HashMap<String, Object> metaData;
 
 
@@ -26,7 +26,7 @@ public class CommandData implements Parcelable {
         this.id = id;
         this.command = command;
         this.params = params;
-        daySchedule = null;
+        dayStatus = null;
         playlist = null;
     }
 
@@ -54,12 +54,12 @@ public class CommandData implements Parcelable {
         this.params = params;
     }
 
-    public HashMap<Integer, DayOptions> getDaySchedule() {
-        return daySchedule;
+    public HashMap<Integer, DayStatus> getDayStatus() {
+        return dayStatus;
     }
 
-    public void setDaySchedule(HashMap<Integer, DayOptions> daySchedule) {
-        this.daySchedule = daySchedule;
+    public void setDayStatus(HashMap<Integer, DayStatus> dayStatus) {
+        this.dayStatus = dayStatus;
     }
 
     public Playlist getPlaylist() {
@@ -92,7 +92,7 @@ public class CommandData implements Parcelable {
             dest.writeString(this.params.toString());
         }
         dest.writeParcelable(this.playlist, flags);
-        dest.writeSerializable(this.daySchedule);
+        dest.writeSerializable(this.dayStatus);
         dest.writeSerializable(this.metaData);
     }
 
@@ -105,7 +105,7 @@ public class CommandData implements Parcelable {
                 this.params = new JSONObject(in.readString());
             }
             this.playlist = in.readParcelable(Playlist.class.getClassLoader());
-            this.daySchedule = (HashMap<Integer, DayOptions>) in.readSerializable();
+            this.dayStatus = (HashMap<Integer, DayStatus>) in.readSerializable();
             this.metaData = (HashMap<String, Object>) in.readSerializable();
         } catch (JSONException e) {
             e.printStackTrace();

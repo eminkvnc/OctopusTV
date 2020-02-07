@@ -35,6 +35,8 @@ import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 import java.io.File;
 
 import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
+import static com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity.ACTION_SCREEN_WAKEUP;
+import static com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity.PARAM_SCREEN_WAKEUP;
 
 public class PlayerFragment extends Fragment {
 
@@ -53,7 +55,8 @@ public class PlayerFragment extends Fragment {
     private boolean isPlaylistUpdated = false;
     private boolean isNetworkConnected = false;
 
-    private boolean isPlaying = false;
+    private boolean isLaunched = false;
+    public boolean screenAwake = true;
     private Activity context;
     private MediaData currentMedia;
     private MediaData previousMedia;
@@ -65,6 +68,7 @@ public class PlayerFragment extends Fragment {
 
     private BroadcastReceiver waitReceiver;
     private BroadcastReceiver updateReceiver;
+    private BroadcastReceiver startStopReceiver;
 
     public PlayerFragment() {
 
@@ -73,26 +77,23 @@ public class PlayerFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
+        //context.finishAffinity();
+        playlistWaited(true);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
         context.unregisterReceiver(waitReceiver);
         LocalBroadcastManager.getInstance(context).unregisterReceiver(updateReceiver);
-        //context.finishAffinity();
+        LocalBroadcastManager.getInstance(context).unregisterReceiver(startStopReceiver);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
-        intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
-        intentFilter2.addAction(FullscreenActivity.ACTION_WAITING);
-        context.registerReceiver(waitReceiver, intentFilter2);
-        LocalBroadcastManager.getInstance(context).registerReceiver(updateReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
+        playlistWaited(false);
     }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
@@ -113,7 +114,7 @@ public class PlayerFragment extends Fragment {
                 playlist = p;
             }
 
-            if(!isPlaying){
+            if(!isLaunched){
                 launchPlayer();
             }
         });
@@ -148,6 +149,26 @@ public class PlayerFragment extends Fragment {
                 }
             }
         };
+
+        startStopReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                screenAwake = intent.getBooleanExtra(PARAM_SCREEN_WAKEUP,false);
+
+                if (screenAwake) {
+                    playlistWaited(false);
+                } else {
+                    playlistWaited(true);
+                }
+            }
+        };
+
+        IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
+        intentFilter2.addAction(FullscreenActivity.ACTION_WAITING);
+        context.registerReceiver(waitReceiver, intentFilter2);
+        LocalBroadcastManager.getInstance(context).registerReceiver(updateReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
+        LocalBroadcastManager.getInstance(context).registerReceiver(startStopReceiver, new IntentFilter(ACTION_SCREEN_WAKEUP));
     }
 
     @Nullable
@@ -175,7 +196,7 @@ public class PlayerFragment extends Fragment {
 
     public void launchPlayer(){
         if(!playlist.isEmpty() && downloadDir.list() != null){
-            isPlaying = true;
+            isLaunched = true;
             loopPlaylist(0L);
         }
     }
@@ -271,8 +292,8 @@ public class PlayerFragment extends Fragment {
         }
     }
 
-    public boolean isPlaying() {
-        return isPlaying;
+    public boolean isLaunched() {
+        return isLaunched;
     }
 
     @Nullable
@@ -291,19 +312,24 @@ public class PlayerFragment extends Fragment {
 
     //TODO: Report mediaData to server when media paused and played again.
     public void playlistWaited(boolean isWaiting) {
-        if(isWaiting){
-            if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
-                player.setPlayWhenReady(false);
+        if(isLaunched){
+            if(isWaiting){
+                if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
+                    player.setPlayWhenReady(false);
+                }
+                playlistLooperHandler.removeCallbacks(playlistLooperRunnable);
+                playlistStopTime = System.currentTimeMillis();
+                playlistRemainingTime = Long.valueOf(previousMedia.getTime()) - (playlistStopTime - playlistStartTime);
+            }else{
+                if(screenAwake){
+                    if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
+                        player.setPlayWhenReady(true);
+                    }
+                    if(playlistLooperHandler != null && playlistLooperRunnable != null && playlistRemainingTime != null){
+                        playlistLooperHandler.postDelayed(playlistLooperRunnable, playlistRemainingTime);
+                    }
+                }
             }
-            playlistLooperHandler.removeCallbacks(playlistLooperRunnable);
-            playlistStopTime = System.currentTimeMillis();
-            playlistRemainingTime = Long.valueOf(previousMedia.getTime()) - (playlistStopTime - playlistStartTime);
-        }else{
-            if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
-                player.setPlayWhenReady(true);
-            }
-            playlistLooperHandler.postDelayed(playlistLooperRunnable, playlistRemainingTime);
-
         }
     }
 

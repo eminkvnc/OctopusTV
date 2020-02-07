@@ -9,6 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 
 import static com.tvoctopus.player.model.APIKeys.KEY_COMMAND;
@@ -90,7 +91,7 @@ public class JSonParser {
             switch (commandType){
                 case KEY_COMMANDS_SYNC:
                     Playlist playlist = new Playlist();
-                    HashMap<Integer, DayOptions> dayScheduleMap = new HashMap<>();
+                    HashMap<Integer, DayStatus> dayScheduleMap = new HashMap<>();
                     HashMap<String, Object> metaData = new HashMap<>();
                     try {
                         //Playlist mapping
@@ -109,11 +110,27 @@ public class JSonParser {
                         if(params.has(KEY_PARAMS_SCHEDULE)){
                         JSONObject dayScheduleJSon = params.getJSONObject(KEY_PARAMS_SCHEDULE);
                             for(int j = 1; j < 8 ; j++){
-                                DayOptions dayOptions = new DayOptions(
-                                        dayScheduleJSon.get("day_"+j+"_on").toString(),
-                                        dayScheduleJSon.get("day_"+j+"_off").toString(),
-                                        dayScheduleJSon.getString("day_"+j+"_status"));
-                                dayScheduleMap.put(j,dayOptions);
+                                DayStatus dayStatus;
+
+                                Calendar calendarOn = null;
+                                Calendar calendarOff = null;
+                                if(dayScheduleJSon.getString("day_"+j+"_status").equals(DayStatus.STATUS_SCHEDULED)){
+                                    String[] splitOn = dayScheduleJSon.get("day_"+j+"_on").toString().split(":");
+                                    String[] splitOff = dayScheduleJSon.get("day_" + j + "_off").toString().split(":");
+                                    calendarOn = Calendar.getInstance();
+                                    calendarOn.set(Calendar.DAY_OF_WEEK, j-1);
+                                    calendarOn.set(Calendar.HOUR_OF_DAY, Integer.parseInt(splitOn[0]));
+                                    calendarOn.set(Calendar.MINUTE, Integer.parseInt(splitOn[1]));
+                                    calendarOn.set(Calendar.SECOND, Integer.parseInt(splitOn[2]));
+
+                                    calendarOff = Calendar.getInstance();
+                                    calendarOff.set(Calendar.DAY_OF_WEEK, j - 1);
+                                    calendarOff.set(Calendar.HOUR_OF_DAY, Integer.parseInt(splitOff[0]));
+                                    calendarOff.set(Calendar.MINUTE, Integer.parseInt(splitOff[1]));
+                                    calendarOff.set(Calendar.SECOND, Integer.parseInt(splitOff[2]));
+                                }
+                                dayStatus = new DayStatus(calendarOn, calendarOff, dayScheduleJSon.getString("day_"+j+"_status"));
+                                dayScheduleMap.put(j, dayStatus);
                             }
                         }
                         //TODO: Check params object has keys.
@@ -130,7 +147,7 @@ public class JSonParser {
                         metaData.put(KEY_PARAMS_WIFI_COUNTRY,params.get(KEY_PARAMS_WIFI_COUNTRY));
 
                         commandData.setPlaylist(playlist);
-                        commandData.setDaySchedule(dayScheduleMap);
+                        commandData.setDayStatus(dayScheduleMap);
                         commandData.setMetaData(metaData);
 
                     } catch (JSONException e) {

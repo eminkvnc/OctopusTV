@@ -2,6 +2,8 @@ package com.tvoctopus.player.model;
 
 import androidx.lifecycle.MutableLiveData;
 
+import java.util.HashMap;
+
 public class ScreenConfig{
 
     private MutableLiveData<Integer> screenOrientation;
@@ -10,6 +12,7 @@ public class ScreenConfig{
     private MutableLiveData<Boolean> weatherEnabled;
     private MutableLiveData<Boolean> rssEnabled;
     private MutableLiveData<Boolean> widgetBarEnabled;
+    private MutableLiveData<HashMap<Integer, DayStatus>> dayStatusMap;
 
     public MutableLiveData<String> getWeatherCity() {
         return weatherCity;
@@ -57,5 +60,13 @@ public class ScreenConfig{
 
     public void setWidgetBarEnabled(MutableLiveData<Boolean> widgetBarEnabled) {
         this.widgetBarEnabled = widgetBarEnabled;
+    }
+
+    public MutableLiveData<HashMap<Integer, DayStatus>> getDayStatusMap() {
+        return dayStatusMap;
+    }
+
+    public void setDayStatusMap(MutableLiveData<HashMap<Integer, DayStatus>> dayStatusMap) {
+        this.dayStatusMap = dayStatusMap;
     }
 }

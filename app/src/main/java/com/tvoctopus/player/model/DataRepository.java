@@ -10,6 +10,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,6 +30,7 @@ public class DataRepository {
     public static final String SHARED_PREF_WIDGET_RSS_ENABLED_KEY = "rssEnabled";
     public static final String SHARED_PREF_WIDGET_BAR_ENABLED_KEY = "widgetBarEnabled";
     public static final String SHARED_PREF_SCREEN_ORIENTATION_KEY = "ScreenOrientation";
+    public static final String SHARED_PREF_DAY_STATUS_KEY = "DayStatus";
     public static final String SHARED_PREF_CAPTION_DATA_KEY = "CaptionData";
 
     private Application application;
@@ -196,6 +199,69 @@ public class DataRepository {
         };
     }
 
+    private MutableLiveData<HashMap<Integer, DayStatus>> getDayStatus(){
+        SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE);
+        return new SharedPreferenceLiveData<HashMap<Integer, DayStatus>>(sp, SHARED_PREF_DAY_STATUS_KEY, null) {
+
+            @Override
+            HashMap<Integer, DayStatus> getValueFromPreferences(String key, HashMap<Integer, DayStatus> defValue) {
+
+                HashMap<Integer, DayStatus> hashMap = new HashMap<>();
+                Set<String> stringSet = sp.getStringSet(key, new HashSet<>());
+
+                for(String s : stringSet){
+                    if(s != null){
+                        Calendar calendarOn = null;
+                        Calendar calendarOff = null;
+                        String[] split = s.split("%%%");
+                        if(split[3].equals(DayStatus.STATUS_SCHEDULED)){
+                            String[] splitOn = split[1].split(":");
+                            calendarOn = Calendar.getInstance();
+                            calendarOn.set(Calendar.DAY_OF_WEEK, Integer.parseInt(split[0])-1);
+                            calendarOn.set(Calendar.HOUR_OF_DAY, Integer.parseInt(splitOn[0]));
+                            calendarOn.set(Calendar.MINUTE, Integer.parseInt(splitOn[1]));
+                            calendarOn.set(Calendar.SECOND, Integer.parseInt(splitOn[2]));
+
+                            String[] splitOff = split[2].split(":");
+                            calendarOff = Calendar.getInstance();
+                            calendarOff.set(Calendar.DAY_OF_WEEK, Integer.parseInt(split[0])-1);
+                            calendarOff.set(Calendar.HOUR_OF_DAY, Integer.parseInt(splitOff[0]));
+                            calendarOff.set(Calendar.MINUTE, Integer.parseInt(splitOff[1]));
+                            calendarOff.set(Calendar.SECOND, Integer.parseInt(splitOff[2]));
+                        }
+
+                        DayStatus dayStatus = new DayStatus(calendarOn,calendarOff,split[3]);
+                        hashMap.put(Integer.parseInt(split[0]), dayStatus);
+                    }
+
+                    }
+
+                return hashMap;
+            }
+
+            @Override
+            public void setAndPostValue(HashMap<Integer, DayStatus> value) {
+                Set<String> stringSet = new HashSet<>();
+                for(int j = 1; j < 8 ; j++){
+                    DayStatus dayStatus = value.get(j);
+                    String s = null;
+                    if (dayStatus != null) {
+                        String on = null;
+                        String off = null;
+                        if(dayStatus.getStatus().equals(DayStatus.STATUS_SCHEDULED)){
+                            on = dayStatus.getOn().get(Calendar.HOUR_OF_DAY)+":"+dayStatus.getOn().get(Calendar.MINUTE)+":"+dayStatus.getOn().get(Calendar.SECOND);
+                            off = dayStatus.getOff().get(Calendar.HOUR_OF_DAY)+":"+dayStatus.getOff().get(Calendar.MINUTE)+":"+dayStatus.getOff().get(Calendar.SECOND);
+                        }
+
+                        s = j+"%%%"+on+"%%%"+off+"%%%"+dayStatus.getStatus();
+                    }
+                    stringSet.add(s);
+                }
+                sp.edit().putStringSet(SHARED_PREF_DAY_STATUS_KEY, stringSet).apply();
+            }
+        };
+    }
+
     public MutableLiveData<Boolean> getNetworkConnected(){
         return new NetworkConnectionLiveData(application.getApplicationContext());
     }
@@ -223,6 +289,7 @@ public class DataRepository {
         screenConfig.setWidgetBarPosition(getWidgetBarPosition());
         screenConfig.setWeatherEnabled(getWidgetWeatherEnabled());
         screenConfig.setRssEnabled(getWidgetRssEnabled());
+        screenConfig.setDayStatusMap(getDayStatus());
         return screenConfig;
     }
 

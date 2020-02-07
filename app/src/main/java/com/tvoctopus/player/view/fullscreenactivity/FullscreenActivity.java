@@ -3,6 +3,8 @@ package com.tvoctopus.player.view.fullscreenactivity;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -36,16 +38,17 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.github.rongi.rotate_layout.layout.RotateLayout;
 import com.google.zxing.WriterException;
-import com.tvoctopus.player.view.GifDialog;
 import com.tvoctopus.player.R;
-import com.tvoctopus.player.utils.ShellExecutor;
 import com.tvoctopus.player.model.CommandData;
+import com.tvoctopus.player.model.DayStatus;
 import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.services.Downloader;
 import com.tvoctopus.player.services.QuerySchedulerService;
 import com.tvoctopus.player.services.Reporter;
 import com.tvoctopus.player.services.RestartService;
 import com.tvoctopus.player.services.WeatherService;
+import com.tvoctopus.player.utils.ShellExecutor;
+import com.tvoctopus.player.view.GifDialog;
 import com.tvoctopus.player.view.player.PlayerFragment;
 import com.tvoctopus.player.view.widget.WidgetFragment;
 
@@ -53,6 +56,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -97,7 +101,8 @@ public class FullscreenActivity extends AppCompatActivity {
 
     public static final String ACTION_WAITING = "ACTION_WAITING";
     public static final String PARAM_WAITING = "PARAM_WAITING";
-
+    public static final String ACTION_SCREEN_WAKEUP = "ACTION_SCREEN_WAKEUP";
+    public static final String PARAM_SCREEN_WAKEUP = "PARAM_SCREEN_WAKEUP";
 
     private final Handler mHideHandler = new Handler();
     private RotateLayout mainFrame;
@@ -123,12 +128,16 @@ public class FullscreenActivity extends AppCompatActivity {
     private BroadcastReceiver turnOffTvCommandReceiver;
     private BroadcastReceiver screenShotCommandReceiver;
     private BroadcastReceiver downloadCompleteReceiver;
+    private BroadcastReceiver startStopReceiver;
 
     private Intent querySchedulerService = null;
     private Intent weatherService = null;
 
     private ArrayList<CommandData> commands;
     private Bitmap qrBitmap;
+
+    AlarmManager alarmManager;
+    HashMap<Integer, PendingIntent[]> pendingIntentMap;
 
     private FullScreenActivityViewModel viewModel;
 
@@ -166,6 +175,8 @@ public class FullscreenActivity extends AppCompatActivity {
 
         mVisible = true;
         commands = new ArrayList<>();
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        pendingIntentMap = new HashMap<>();
         activity = this;
 
         gifDialog = new GifDialog(FullscreenActivity.this);
@@ -206,21 +217,17 @@ public class FullscreenActivity extends AppCompatActivity {
             if(networkConnected && screenRegistered){
                 dismissMessages();
                 startServices();
-
             }
             if(!networkConnected && screenRegistered){
                 dismissMessages();
                 stopServices();
-
             }
         });
 
         viewModel.getScreenRegistered().observe(this, screenRegistered -> {
-            if(!screenRegistered){
+            if ((!screenRegistered)) {
                 showNetworkConnectionMessage();
-            }
-            //Screen registered cases
-            else{
+            } else {
                 dismissMessages();
             }
         });
@@ -242,9 +249,23 @@ public class FullscreenActivity extends AppCompatActivity {
             startService(weatherService);
         });
 
-        viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer, 15, 15));
+        viewModel.getConfig().getDayStatusMap().observe(this, hashMap -> updateAlarms(hashMap));
+
+        viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer));
 
         viewModel.getCaptionData().observe(this, s -> captionTextView.setText(s));
+
+        startStopReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                boolean screenAwake = intent.getBooleanExtra(PARAM_SCREEN_WAKEUP,false);
+                if (screenAwake) {
+                    mainFrame.setVisibility(View.VISIBLE);
+                } else {
+                    mainFrame.setVisibility(View.GONE);
+                }
+            }
+        };
 
         screenRegisteredReceiver = new BroadcastReceiver() {
             @Override
@@ -302,6 +323,14 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         };
 
+        registerReceiver(startStopReceiver, new IntentFilter(ACTION_SCREEN_WAKEUP));
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
+        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+        lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
+        lbm.registerReceiver(syncCommandReceiver, new IntentFilter(ACTION_COMMAND_SYNC));
+        lbm.registerReceiver(reportCommandReceiver, new IntentFilter(ACTION_COMMAND_REPORT));
+        lbm.registerReceiver(resetCommandReceiver, new IntentFilter(ACTION_COMMAND_RESET));
+
     }
 
     @Override
@@ -329,14 +358,13 @@ public class FullscreenActivity extends AppCompatActivity {
         playerFragment.stopPlayer();
         stopService(querySchedulerService);
         stopService(weatherService);
-
+        unregisterReceiver(startStopReceiver);
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
         lbm.unregisterReceiver(screenRegisteredReceiver);
         lbm.unregisterReceiver(downloadCompleteReceiver);
         lbm.unregisterReceiver(syncCommandReceiver);
         lbm.unregisterReceiver(reportCommandReceiver);
         lbm.unregisterReceiver(resetCommandReceiver);
-//        lbm.unregisterReceiver(screenRegisteredReceiver);
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(), RestartService.class);
@@ -355,16 +383,10 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Intent intent = new Intent(ACTION_WAITING);
-        intent.putExtra(PARAM_WAITING,false);
-        sendBroadcast(intent);
-        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
-        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
-        lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
-        lbm.registerReceiver(syncCommandReceiver, new IntentFilter(ACTION_COMMAND_SYNC));
-        lbm.registerReceiver(reportCommandReceiver, new IntentFilter(ACTION_COMMAND_REPORT));
-        lbm.registerReceiver(resetCommandReceiver, new IntentFilter(ACTION_COMMAND_RESET));
-//        lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
+//        Intent intent = new Intent(ACTION_WAITING);
+//        intent.putExtra(PARAM_WAITING,false);
+//        sendBroadcast(intent);
+
     }
 
     private void toggle() {
@@ -455,6 +477,75 @@ public class FullscreenActivity extends AppCompatActivity {
 
     }
 
+    private void updateAlarms(HashMap<Integer, DayStatus> hashMap){
+        //TODO: Check alarms is working.
+        Calendar currentDate = Calendar.getInstance();
+        currentDate.setTimeInMillis(System.currentTimeMillis());
+        Intent intentOn = new Intent(ACTION_SCREEN_WAKEUP);
+        intentOn.putExtra(PARAM_SCREEN_WAKEUP,true);
+        Intent intentOff = new Intent(ACTION_SCREEN_WAKEUP);
+        intentOff.putExtra(PARAM_SCREEN_WAKEUP,false);
+        PendingIntent pendingIntentOn = PendingIntent.getBroadcast(getApplicationContext(), 3230, intentOn, 0);
+        PendingIntent pendingIntentOff = PendingIntent.getBroadcast(getApplicationContext(), 3231, intentOff, 0);
+        if(!hashMap.isEmpty()) {
+            for (int i = 1; i < 8; i++) {
+                PendingIntent[] pendingIntent = pendingIntentMap.get(i);
+                DayStatus dayStatus = hashMap.get(i);
+                if (pendingIntent != null) {
+                    if (pendingIntent[0] != null) {
+                        alarmManager.cancel(pendingIntent[0]);
+                    }
+                    if (pendingIntent[1] != null) {
+                        alarmManager.cancel(pendingIntent[1]);
+                    }
+                }
+                pendingIntent = new PendingIntent[2];
+                if (dayStatus != null) {
+                    if (dayStatus.getStatus().equals(DayStatus.STATUS_ON)) {
+                        int currentDay = currentDate.get(Calendar.DAY_OF_WEEK);
+                        if (i+1%7 == currentDay) {
+                            sendBroadcast(intentOn);
+                        }
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, i - 1);
+                        calendar.set(Calendar.HOUR_OF_DAY, 0);
+                        calendar.set(Calendar.MINUTE, 0);
+                        calendar.set(Calendar.SECOND, 0);
+                        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY * 7, pendingIntentOn);
+                        pendingIntent[0] = pendingIntentOn;
+                        pendingIntentMap.put(i, pendingIntent);
+                    }
+                    if (dayStatus.getStatus().equals(DayStatus.STATUS_OFF)) {
+                        int currentDay = currentDate.get(Calendar.DAY_OF_WEEK);
+                        if (i+1%7 == currentDay) {
+                            sendBroadcast(intentOff);
+                        }
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, i - 1);
+                        calendar.set(Calendar.HOUR_OF_DAY, 0);
+                        calendar.set(Calendar.MINUTE, 0);
+                        calendar.set(Calendar.SECOND, 0);
+                        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY * 7, pendingIntentOff);
+                        pendingIntent[1] = pendingIntentOff;
+                        pendingIntentMap.put(i, pendingIntent);
+                    }
+                    if (dayStatus.getStatus().equals(DayStatus.STATUS_SCHEDULED)) {
+                        dayStatus.fitTimes();
+                        if (dayStatus.getOn().before(currentDate) && dayStatus.getOff().after(currentDate)) {
+                            sendBroadcast(intentOn);
+                        }
+                        pendingIntent[0] = pendingIntentOn;
+                        pendingIntent[1] = pendingIntentOff;
+                        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, dayStatus.getOn().getTimeInMillis(), AlarmManager.INTERVAL_DAY * 7, pendingIntent[0]);
+                        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, dayStatus.getOff().getTimeInMillis(), AlarmManager.INTERVAL_DAY * 7, pendingIntent[1]);
+                        pendingIntentMap.put(i, pendingIntent);
+                    }
+                }
+            }
+        }
+    }
+
+
     // reverse clockwise
     private void rotateScreen(int degree){
         runOnUiThread(() -> {
@@ -513,7 +604,7 @@ public class FullscreenActivity extends AppCompatActivity {
 //        }
     }
 
-    public void setWidgetBarPosition(int position, int widthPercentage, int heightPercentage){
+    public void setWidgetBarPosition(int position){
 
         switch (position){
             case POSITION_TOP:
@@ -575,7 +666,7 @@ public class FullscreenActivity extends AppCompatActivity {
                                 ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand);
                                 shellExecutorOn.start();
                             } else{
-//                                if(!playerFragment.isPlaying()){
+//                                if(!playerFragment.isLaunched()){
 //                                    playerFragment.launchPlayer();
 //                                }
                             }
@@ -592,7 +683,7 @@ public class FullscreenActivity extends AppCompatActivity {
                                 ShellExecutor shellExecutorOff = new ShellExecutor(turnOffShellCommand);
                                 shellExecutorOff.start();
                             } else{
-                                if(playerFragment.isPlaying()){
+                                if(playerFragment.isLaunched()){
                                     // if cec cmd not found we can stop playing media from player fragment
                                 }
                             }
@@ -714,6 +805,8 @@ public class FullscreenActivity extends AppCompatActivity {
             int orientation = Integer.parseInt(orientationString);
             viewModel.getConfig().getScreenOrientation().postValue(orientation);
         }
+
+        viewModel.getConfig().getDayStatusMap().postValue(commandData.getDayStatus());
 
         //TODO: Handle widget bar position, percentage, width and height when API results
         // available for widgets.
