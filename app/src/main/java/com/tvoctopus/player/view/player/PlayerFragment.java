@@ -78,7 +78,7 @@ public class PlayerFragment extends Fragment {
     public void onPause() {
         super.onPause();
         //context.finishAffinity();
-//        playlistWaited(true);
+        playlistWaited(true);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class PlayerFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-//        playlistWaited(false);
+        playlistWaited(false);
     }
 
     @Override

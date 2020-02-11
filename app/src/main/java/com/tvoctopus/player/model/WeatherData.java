@@ -180,7 +180,7 @@ public class WeatherData {
         private final double feelsLike;
 
         @SerializedName("temp_min")
-        private final int tempMin;
+        private final double tempMin;
 
         @SerializedName("temp_max")
         private final double tempMax;
@@ -191,7 +191,7 @@ public class WeatherData {
         @SerializedName("humidity")
         private final int humidity;
 
-        public Main(double temp, double feelsLike, int tempMin, double tempMax, int pressure,
+        public Main(double temp, double feelsLike, double tempMin, double tempMax, int pressure,
                     int humidity) {
             this.temp = temp;
             this.feelsLike = feelsLike;
@@ -209,7 +209,7 @@ public class WeatherData {
             return feelsLike;
         }
 
-        public int getTempMin() {
+        public double getTempMin() {
             return tempMin;
         }
 
