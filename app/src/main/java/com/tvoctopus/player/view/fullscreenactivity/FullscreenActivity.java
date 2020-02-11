@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -142,6 +143,8 @@ public class FullscreenActivity extends AppCompatActivity {
 
     AlarmManager alarmManager;
     HashMap<Integer, PendingIntent[]> pendingIntentMap;
+    private boolean isOverlayActivated = true;
+    private int mainFrameClickCount = 0;
 
     private FullScreenActivityViewModel viewModel;
 
@@ -194,7 +197,27 @@ public class FullscreenActivity extends AppCompatActivity {
 
         mainFrame = findViewById(R.id.main_frame);
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
-        mainFrame.setOnClickListener(view -> toggle());
+        SharedPreferences sp = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
+        isOverlayActivated = sp.getBoolean("OverlayActivated",false);
+
+        mainFrame.setOnClickListener(v -> {
+            toggle();
+            mainFrameClickCount ++;
+            Handler handler = new Handler();
+            handler.postDelayed(() -> mainFrameClickCount = 0,2000);
+            if(mainFrameClickCount == 5){
+                isOverlayActivated = !isOverlayActivated;
+                if(isOverlayActivated){
+                    Toast.makeText(activity, "Overlay enabled.", Toast.LENGTH_SHORT).show();
+                }else{
+                    Toast.makeText(activity, "Overlay disabled.", Toast.LENGTH_SHORT).show();
+                }
+
+                SharedPreferences sp2 = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
+                sp2.edit().putBoolean("OverlayActivated",isOverlayActivated).apply();
+                mainFrameClickCount = 0;
+            }
+        });
 
         captionTextView = findViewById(R.id.caption_tv);
         captionTextView.setSelected(true);
@@ -317,6 +340,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 CommandData commandData = intent.getParcelableExtra(QuerySchedulerService.PARAM_COMMAND_DATA);
                 if (commandData != null){
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandData.getId(),"succeeded");
+                    playerFragment.stopPlayer();
                     clearApplicationData();
                     finishAffinity();
                 }
@@ -382,7 +406,9 @@ public class FullscreenActivity extends AppCompatActivity {
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(), RestartService.class);
-        startService(intent);
+        if(isOverlayActivated) {
+            startService(intent);
+        }
     }
 
     @Override
@@ -612,10 +638,10 @@ public class FullscreenActivity extends AppCompatActivity {
     }
 
     private void clearApplicationData(){
-        playerFragment.stopPlayer();
         getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE).edit().clear().apply();
         getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE).edit().clear().apply();
         getSharedPreferences(SHARED_PREF_PLAYLIST, Context.MODE_PRIVATE).edit().clear().apply();
+        getSharedPreferences("ReportQueue", Context.MODE_PRIVATE).edit().clear().apply();
         File file = getExternalFilesDir(DOWNLOAD_DIR);
         if (file != null) {
             deleteDirectory(file);

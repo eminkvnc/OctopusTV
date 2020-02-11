@@ -108,12 +108,8 @@ public class PlayerFragment extends Fragment {
         });
 
         playerFragmentViewModel.getPlaylist().observe(getViewLifecycleOwner(), p -> {
-
-            if (playlist != null && p != null && !p.isEmpty() && !playlist.getMediaNames().containsAll(p.getMediaNames())){
-                isPlaylistUpdated = true;
-                playlist = p;
-            }
-            if(!isLaunched){
+            boolean screenRegistered = playerFragmentViewModel.getScreenRegisteredValue();
+            if(!isLaunched && p != null && !p.isEmpty() && screenRegistered){
                 launchPlayer();
             }
         });
@@ -124,11 +120,9 @@ public class PlayerFragment extends Fragment {
                 boolean allDownloadsComplete = intent.getBooleanExtra(Downloader.PARAM_DOWNLOAD_COMPLETE_STATUS,false);
                 if(allDownloadsComplete){
                     Playlist p = intent.getParcelableExtra(PARAM_DOWNLOAD_COMPLETE_PLAYLIST);
-                    if(playlist.getMediaNames().containsAll(p.getMediaNames())){
-                        removeTempFiles();
-                    }else{
-                        playerFragmentViewModel.getPlaylist().postValue(p);
-                    }
+                    isPlaylistUpdated = true;
+                    playlist = p;
+                    playerFragmentViewModel.getPlaylist().postValue(p);
                 }
             }
         };

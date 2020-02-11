@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.tvoctopus.player.model.DataRepository;
 import com.tvoctopus.player.model.MediaData;
 import com.tvoctopus.player.model.Playlist;
+import com.tvoctopus.player.model.ScreenConfig;
 
 public class PlayerFragmentViewModel extends AndroidViewModel {
 
@@ -18,6 +19,14 @@ public class PlayerFragmentViewModel extends AndroidViewModel {
         super(application);
         dataRepository = new DataRepository(application);
 
+    }
+
+    public MutableLiveData<Boolean> getScreenRegistered(){
+        return dataRepository.getScreenRegistered();
+    }
+
+    public boolean getScreenRegisteredValue(){
+        return dataRepository.getScreenRegisteredValue();
     }
 
     public MutableLiveData<Boolean> getNetworkConnected(){
@@ -35,5 +44,10 @@ public class PlayerFragmentViewModel extends AndroidViewModel {
     public void reportMediaData(MediaData mediaData, boolean networkConnected){
         dataRepository.reportMediaData(mediaData, networkConnected);
     }
+
+    public ScreenConfig getConfig(){
+        return dataRepository.getScreenConfig();
+    }
+
 
 }
