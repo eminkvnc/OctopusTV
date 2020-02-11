@@ -58,6 +58,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import androidmads.library.qrgenearator.QRGContents;
@@ -249,7 +250,7 @@ public class FullscreenActivity extends AppCompatActivity {
             startService(weatherService);
         });
 
-        viewModel.getConfig().getDayStatusMap().observe(this, hashMap -> updateAlarms(hashMap));
+//        viewModel.getConfig().getDayStatusMap().observe(this, hashMap -> updateAlarms(hashMap));
 
         viewModel.getConfig().getWidgetBarPosition().observe(this, integer -> setWidgetBarPosition(integer));
 
@@ -481,6 +482,7 @@ public class FullscreenActivity extends AppCompatActivity {
         //TODO: Check alarms is working.
         Calendar currentDate = Calendar.getInstance();
         currentDate.setTimeInMillis(System.currentTimeMillis());
+        currentDate.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
         Intent intentOn = new Intent(ACTION_SCREEN_WAKEUP);
         intentOn.putExtra(PARAM_SCREEN_WAKEUP,true);
         Intent intentOff = new Intent(ACTION_SCREEN_WAKEUP);
@@ -503,10 +505,11 @@ public class FullscreenActivity extends AppCompatActivity {
                 if (dayStatus != null) {
                     if (dayStatus.getStatus().equals(DayStatus.STATUS_ON)) {
                         int currentDay = currentDate.get(Calendar.DAY_OF_WEEK);
-                        if (i+1%7 == currentDay) {
+                        if (i == currentDay) {
                             sendBroadcast(intentOn);
                         }
                         Calendar calendar = Calendar.getInstance();
+                        calendar.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
                         calendar.set(Calendar.DAY_OF_WEEK, i - 1);
                         calendar.set(Calendar.HOUR_OF_DAY, 0);
                         calendar.set(Calendar.MINUTE, 0);
@@ -517,10 +520,12 @@ public class FullscreenActivity extends AppCompatActivity {
                     }
                     if (dayStatus.getStatus().equals(DayStatus.STATUS_OFF)) {
                         int currentDay = currentDate.get(Calendar.DAY_OF_WEEK);
-                        if (i+1%7 == currentDay) {
+                        //TODO: Days not matching.
+                        if (i == currentDay) {
                             sendBroadcast(intentOff);
                         }
                         Calendar calendar = Calendar.getInstance();
+                        calendar.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
                         calendar.set(Calendar.DAY_OF_WEEK, i - 1);
                         calendar.set(Calendar.HOUR_OF_DAY, 0);
                         calendar.set(Calendar.MINUTE, 0);
@@ -533,11 +538,15 @@ public class FullscreenActivity extends AppCompatActivity {
                         dayStatus.fitTimes();
                         if (dayStatus.getOn().before(currentDate) && dayStatus.getOff().after(currentDate)) {
                             sendBroadcast(intentOn);
+                        }else{
+                            sendBroadcast(intentOff);
                         }
                         pendingIntent[0] = pendingIntentOn;
                         pendingIntent[1] = pendingIntentOff;
                         alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, dayStatus.getOn().getTimeInMillis(), AlarmManager.INTERVAL_DAY * 7, pendingIntent[0]);
                         alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, dayStatus.getOff().getTimeInMillis(), AlarmManager.INTERVAL_DAY * 7, pendingIntent[1]);
+                        Log.d(TAG, "updateAlarms: alarmSet On: "+dayStatus.getOn().toString());
+                        Log.d(TAG, "updateAlarms: alarmSet Off: "+dayStatus.getOff().toString());
                         pendingIntentMap.put(i, pendingIntent);
                     }
                 }

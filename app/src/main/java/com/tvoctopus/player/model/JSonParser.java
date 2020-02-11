@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.TimeZone;
 
 import static com.tvoctopus.player.model.APIKeys.KEY_COMMAND;
 import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS;
@@ -118,13 +119,17 @@ public class JSonParser {
                                     String[] splitOn = dayScheduleJSon.get("day_"+j+"_on").toString().split(":");
                                     String[] splitOff = dayScheduleJSon.get("day_" + j + "_off").toString().split(":");
                                     calendarOn = Calendar.getInstance();
-                                    calendarOn.set(Calendar.DAY_OF_WEEK, j-1);
+                                    calendarOn.setTimeInMillis(System.currentTimeMillis());
+                                    calendarOn.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
+                                    calendarOn.set(Calendar.DAY_OF_WEEK, j+1%7);
                                     calendarOn.set(Calendar.HOUR_OF_DAY, Integer.parseInt(splitOn[0]));
                                     calendarOn.set(Calendar.MINUTE, Integer.parseInt(splitOn[1]));
                                     calendarOn.set(Calendar.SECOND, Integer.parseInt(splitOn[2]));
 
                                     calendarOff = Calendar.getInstance();
-                                    calendarOff.set(Calendar.DAY_OF_WEEK, j - 1);
+                                    calendarOff.setTimeInMillis(System.currentTimeMillis());
+                                    calendarOff.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
+                                    calendarOff.set(Calendar.DAY_OF_WEEK, j+1%7);
                                     calendarOff.set(Calendar.HOUR_OF_DAY, Integer.parseInt(splitOff[0]));
                                     calendarOff.set(Calendar.MINUTE, Integer.parseInt(splitOff[1]));
                                     calendarOff.set(Calendar.SECOND, Integer.parseInt(splitOff[2]));

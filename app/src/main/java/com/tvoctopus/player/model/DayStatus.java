@@ -1,10 +1,12 @@
 package com.tvoctopus.player.model;
 
 
+import android.app.AlarmManager;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import java.util.Calendar;
+import java.util.TimeZone;
 
 public class DayStatus implements Parcelable {
 
@@ -49,22 +51,34 @@ public class DayStatus implements Parcelable {
     }
 
     public void fitTimes(){
+        Calendar currentDate = Calendar.getInstance();
+        currentDate.setTimeInMillis(System.currentTimeMillis());
+        currentDate.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
+
         Calendar currentDateOn = Calendar.getInstance();
         currentDateOn.setTimeInMillis(System.currentTimeMillis());
+        currentDateOn.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
         Calendar onDate = getOn();
         currentDateOn.set(Calendar.DAY_OF_WEEK, onDate.get(Calendar.DAY_OF_WEEK));
         currentDateOn.set(Calendar.HOUR_OF_DAY, onDate.get(Calendar.HOUR_OF_DAY));
         currentDateOn.set(Calendar.MINUTE, onDate.get(Calendar.MINUTE));
         currentDateOn.set(Calendar.SECOND, onDate.get(Calendar.SECOND));
+        if(currentDate.after(currentDateOn)){
+            currentDateOn.setTimeInMillis(currentDateOn.getTimeInMillis() + AlarmManager.INTERVAL_DAY*7);
+        }
         setOn(currentDateOn);
 
         Calendar currentDateOff = Calendar.getInstance();
         currentDateOff.setTimeInMillis(System.currentTimeMillis());
+        currentDateOff.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
         Calendar offDate = getOff();
         currentDateOff.set(Calendar.DAY_OF_WEEK, offDate.get(Calendar.DAY_OF_WEEK));
         currentDateOff.set(Calendar.HOUR_OF_DAY, offDate.get(Calendar.HOUR_OF_DAY));
         currentDateOff.set(Calendar.MINUTE, offDate.get(Calendar.MINUTE));
         currentDateOff.set(Calendar.SECOND, offDate.get(Calendar.SECOND));
+        if(currentDate.after(currentDateOff)){
+            currentDateOff.setTimeInMillis(currentDateOff.getTimeInMillis() + AlarmManager.INTERVAL_DAY*7);
+        }
         setOff(currentDateOff);
     }
 
