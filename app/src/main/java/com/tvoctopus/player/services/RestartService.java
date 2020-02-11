@@ -25,7 +25,7 @@ public class RestartService extends Service {
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             stopSelf();
-        },8000);
+        },1000 * 90);
 
     }
 }

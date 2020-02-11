@@ -11,8 +11,8 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.model.CommandData;
+import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
 import org.json.JSONException;
@@ -55,7 +55,9 @@ public class QuerySchedulerService extends Service {
     public static final String ACTION_COMMAND_TURN_ON_TV = "ACTION_COMMAND_TURN_ON_TV";
     public static final String ACTION_COMMAND_TURN_OFF_TV = "ACTION_COMMAND_TURN_OFF_TV";
     public static final String ACTION_COMMAND_SCREENSHOT = "ACTION_COMMAND_SCREENSHOT";
+    public static final String ACTION_SCREEN_ID = "ACTION_SCREEN_ID";
 
+    public static final String PARAM_SCREEN_KEY = "PARAM_SCREEN_KEY";
     public static final String PARAM_SCREEN_REGISTERED = "PARAM_SCREEN_REGISTERED";
     public static final String PARAM_COMMAND_DATA = "PARAM_COMMAND_DATA";
 
@@ -68,6 +70,7 @@ public class QuerySchedulerService extends Service {
 
     private boolean isWaiting;
     private BroadcastReceiver waitReceiver;
+    private BroadcastReceiver screenIdReceiver;
 
     public QuerySchedulerService() {
 
@@ -91,27 +94,42 @@ public class QuerySchedulerService extends Service {
                 }
             }
         };
+        screenIdReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                try {
+                    url = new URL(urlString+intent.getStringExtra(PARAM_SCREEN_KEY));
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
         IntentFilter intentFilter2 = new IntentFilter(Intent.ACTION_SCREEN_ON);
         intentFilter2.addAction(Intent.ACTION_SCREEN_OFF);
         intentFilter2.addAction(FullscreenActivity.ACTION_WAITING);
         registerReceiver(waitReceiver,intentFilter2);
+        registerReceiver(screenIdReceiver,new IntentFilter(ACTION_SCREEN_ID));
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        new Thread(() -> {
-            if(timer != null){
-                timer.cancel();
-            }
-            timer = new Timer();
-            try {
-                url = new URL(urlString+intent.getStringExtra(SHARED_PREF_SCREEN_ID_KEY));
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-            queryTask = new QueryTask();
+
+        if(timer != null){
+            timer.cancel();
+            timer = null;
+        }
+        timer = new Timer();
+        try {
+            url = new URL(urlString+intent.getStringExtra(SHARED_PREF_SCREEN_ID_KEY));
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        queryTask = new QueryTask();
+        if(timer != null){
             timer.schedule(queryTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
-        }).start();
+        }
+
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -120,7 +138,9 @@ public class QuerySchedulerService extends Service {
         super.onDestroy();
         queryTask.cancel();
         timer.cancel();
+        timer = null;
         unregisterReceiver(waitReceiver);
+        unregisterReceiver(screenIdReceiver);
     }
 
     @Nullable

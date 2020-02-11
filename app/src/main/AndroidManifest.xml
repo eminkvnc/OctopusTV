@@ -19,7 +19,7 @@
 
     <application
         android:name="com.tvoctopus.player.OctopusApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

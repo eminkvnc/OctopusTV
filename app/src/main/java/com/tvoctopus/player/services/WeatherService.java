@@ -77,16 +77,19 @@ public class WeatherService extends Service {
         new Thread(() -> {
             if(timer != null){
                 timer.cancel();
+                timer = null;
             }
-            timer = new Timer();
             try {
+                timer = new Timer();
                 String city = intent.getStringExtra(WEATHER_CITY_KEY);
                 if(city == null){
                     city = "istanbul";
                 }
                 url = new URL(urlP1+city+urlP2);
                 weatherTask = new WeatherTask();
-                timer.schedule(weatherTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
+                if(timer != null){
+                    timer.schedule(weatherTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
+                }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
@@ -100,9 +103,11 @@ public class WeatherService extends Service {
         unregisterReceiver(waitReceiver);
         if(weatherTask != null){
             weatherTask.cancel();
+            weatherTask = null;
         }
         if(timer != null){
             timer.cancel();
+            timer = null;
         }
     }
 

@@ -11,6 +11,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -98,8 +99,9 @@ public class DataRepository {
             public void setAndPostValue(Playlist value) {
                 SharedPreferences sp = application.getSharedPreferences(SHARED_PREF_PLAYLIST, Context.MODE_PRIVATE);
                 Set<String> mediaSet = new HashSet<>();
-                for (MediaData media : value){
-                    String mediaString = media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime();
+                for (int i = 0; i < value.size(); i ++){
+                    MediaData media = value.get(i);
+                    String mediaString = media.getName()+"%%%"+media.getType()+"%%%"+media.getMd5()+"%%%"+media.getTime()+"%%%"+i;
                     mediaSet.add(mediaString);
                 }
                 sp.edit().putStringSet(SHARED_PREF_PLAYLIST_KEY, mediaSet).apply();
@@ -300,6 +302,7 @@ public class DataRepository {
         try {
             Set<String> playlistSet = sp.getStringSet(SHARED_PREF_PLAYLIST_KEY, null);
             if (playlistSet != null) {
+                MediaData[] mediaDataArray = new MediaData[playlistSet.size()];
                 for(String mediaString : playlistSet){
                     String[] mediaData = mediaString.split("%%%");
                     MediaData media = new MediaData(
@@ -307,8 +310,10 @@ public class DataRepository {
                             mediaData[1],
                             mediaData[2],
                             mediaData[3]);
-                    playlist.add(media);
+                    int index = Integer.valueOf(mediaData[4]);
+                    mediaDataArray[index] = media;
                 }
+                Collections.addAll(playlist, mediaDataArray);
             }
         }catch (NullPointerException e){
             e.printStackTrace();

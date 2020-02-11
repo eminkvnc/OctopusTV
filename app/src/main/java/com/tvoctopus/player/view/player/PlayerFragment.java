@@ -78,7 +78,7 @@ public class PlayerFragment extends Fragment {
     public void onPause() {
         super.onPause();
         //context.finishAffinity();
-        playlistWaited(true);
+//        playlistWaited(true);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class PlayerFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        playlistWaited(false);
+//        playlistWaited(false);
     }
 
     @Override
@@ -113,7 +113,6 @@ public class PlayerFragment extends Fragment {
                 isPlaylistUpdated = true;
                 playlist = p;
             }
-
             if(!isLaunched){
                 launchPlayer();
             }
@@ -211,17 +210,19 @@ public class PlayerFragment extends Fragment {
         if(isPlaylistUpdated){
             replaceMediaFiles();
             isPlaylistUpdated = false;
-            currentMedia = playlist.get(0);
             playlist.resetIndex();
+            previousMedia = playlist.get(0);
+            currentMedia = playlist.getNext();
             if(playlistLooperHandler != null){
                 playlistLooperHandler.removeCallbacksAndMessages(null);
             }
+            launchPlayer();
         }else{
             if(currentMedia != null){
                 previousMedia = currentMedia;
             }
             currentMedia = playlist.getNext();
-        }
+
         playlistStartTime = System.currentTimeMillis();
 
         playlistLooperRunnable = () -> {
@@ -261,6 +262,7 @@ public class PlayerFragment extends Fragment {
             playlistLooperHandler = new Handler();
             playlistLooperHandler.postDelayed(playlistLooperRunnable,delay);
         });
+        }
     }
 
     // Remove media from storage if deleted on API

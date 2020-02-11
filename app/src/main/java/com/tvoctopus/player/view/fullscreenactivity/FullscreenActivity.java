@@ -33,6 +33,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -86,7 +87,9 @@ import static com.tvoctopus.player.services.Downloader.DOWNLOAD_DIR;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_REPORT;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_RESET;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_SYNC;
+import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_SCREEN_ID;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_SCREEN_REGISTERED;
+import static com.tvoctopus.player.services.QuerySchedulerService.PARAM_SCREEN_KEY;
 import static com.tvoctopus.player.services.QuerySchedulerService.PARAM_SCREEN_REGISTERED;
 import static com.tvoctopus.player.services.WeatherService.WEATHER_CITY_KEY;
 import static com.tvoctopus.player.view.widget.WidgetFragment.POSITION_TOP;
@@ -204,11 +207,23 @@ public class FullscreenActivity extends AppCompatActivity {
         initFragments();
         initServices(viewModel.getScreenIdValue());
 
+        viewModel.getScreenId().observe(this, new Observer<String>() {
+            @Override
+            public void onChanged(String s) {
+                if(s != null){
+                    Intent intent = new Intent(ACTION_SCREEN_ID);
+                    intent.putExtra(PARAM_SCREEN_KEY, s);
+                    sendBroadcast(intent);
+                    querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, s);
+                }
+            }
+        });
+
         viewModel.getNetworkConnected().observe(this, networkConnected -> {
             boolean screenRegistered = viewModel.getScreenRegisteredValue();
             if(networkConnected && !screenRegistered){
-                generateAndShowQrCode();
                 startServices();
+                generateAndShowQrCode();
             }
             if(!networkConnected && !screenRegistered){
                 showNetworkConnectionMessage();
@@ -233,7 +248,6 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
-        viewModel.getScreenId().observe(this, s -> querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, s));
 
         viewModel.getConfig().getScreenOrientation().observe(this, this::rotateScreen);
 
@@ -247,7 +261,6 @@ public class FullscreenActivity extends AppCompatActivity {
 
         viewModel.getConfig().getWeatherCity().observe(this, s -> {
             weatherService.putExtra(WEATHER_CITY_KEY,s);
-            startService(weatherService);
         });
 
 //        viewModel.getConfig().getDayStatusMap().observe(this, hashMap -> updateAlarms(hashMap));
@@ -256,17 +269,17 @@ public class FullscreenActivity extends AppCompatActivity {
 
         viewModel.getCaptionData().observe(this, s -> captionTextView.setText(s));
 
-        startStopReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                boolean screenAwake = intent.getBooleanExtra(PARAM_SCREEN_WAKEUP,false);
-                if (screenAwake) {
-                    mainFrame.setVisibility(View.VISIBLE);
-                } else {
-                    mainFrame.setVisibility(View.GONE);
-                }
-            }
-        };
+//        startStopReceiver = new BroadcastReceiver() {
+//            @Override
+//            public void onReceive(Context context, Intent intent) {
+//                boolean screenAwake = intent.getBooleanExtra(PARAM_SCREEN_WAKEUP,false);
+//                if (screenAwake) {
+//                    mainFrame.setVisibility(View.VISIBLE);
+//                } else {
+//                    mainFrame.setVisibility(View.GONE);
+//                }
+//            }
+//        };
 
         screenRegisteredReceiver = new BroadcastReceiver() {
             @Override
@@ -324,7 +337,7 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         };
 
-        registerReceiver(startStopReceiver, new IntentFilter(ACTION_SCREEN_WAKEUP));
+//        registerReceiver(startStopReceiver, new IntentFilter(ACTION_SCREEN_WAKEUP));
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
         lbm.registerReceiver(screenRegisteredReceiver, new IntentFilter(ACTION_SCREEN_REGISTERED));
         lbm.registerReceiver(downloadCompleteReceiver, new IntentFilter(Downloader.ACTION_DOWNLOAD_FILE_COMPLETE));
@@ -359,7 +372,7 @@ public class FullscreenActivity extends AppCompatActivity {
         playerFragment.stopPlayer();
         stopService(querySchedulerService);
         stopService(weatherService);
-        unregisterReceiver(startStopReceiver);
+//        unregisterReceiver(startStopReceiver);
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getApplicationContext());
         lbm.unregisterReceiver(screenRegisteredReceiver);
         lbm.unregisterReceiver(downloadCompleteReceiver);
@@ -369,15 +382,15 @@ public class FullscreenActivity extends AppCompatActivity {
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Intent intent = new Intent(getApplicationContext(), RestartService.class);
-//        startService(intent);
+        startService(intent);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Intent intent = new Intent(ACTION_WAITING);
-        intent.putExtra(PARAM_WAITING,true);
-        sendBroadcast(intent);
+//        Intent intent = new Intent(ACTION_WAITING);
+//        intent.putExtra(PARAM_WAITING,true);
+//        sendBroadcast(intent);
 
     }
 
@@ -806,11 +819,14 @@ public class FullscreenActivity extends AppCompatActivity {
 
         //TODO: Implement caption fragment. Implement recyclerView endless loop.
         // Parse caption data from API.
-        String captionText = (String) commandData.getMetaData().get(KEY_PARAMS_WIFI_PASSWORD);
+        String captionText = " ";
+        if(!commandData.getMetaData().get(KEY_PARAMS_WIFI_PASSWORD).toString().equals("null")){
+            captionText = commandData.getMetaData().get(KEY_PARAMS_WIFI_PASSWORD).toString();
+        }
         viewModel.getCaptionData().postValue(captionText);
 
-        String orientationString = (String)commandData.getMetaData().get(KEY_PARAMS_ORIENTATION);
-        if (orientationString != null){
+        if (!commandData.getMetaData().get(KEY_PARAMS_ORIENTATION).toString().equals("null")){
+            String orientationString = commandData.getMetaData().get(KEY_PARAMS_ORIENTATION).toString();
             int orientation = Integer.parseInt(orientationString);
             viewModel.getConfig().getScreenOrientation().postValue(orientation);
         }
@@ -821,8 +837,10 @@ public class FullscreenActivity extends AppCompatActivity {
         // available for widgets.
         // (temporarily used wifi-SSID and overscan metadata fields. Percentage not handled yet.)
         HashMap<String, Object> hashMap = commandData.getMetaData();
-        String cityKey = (String) hashMap.get(KEY_PARAMS_WIFI_SSID);
-        viewModel.getConfig().getWeatherCity().postValue(cityKey);
+        if (!commandData.getMetaData().get(KEY_PARAMS_WIFI_SSID).toString().equals("null")){
+            String cityKey = hashMap.get(KEY_PARAMS_WIFI_SSID).toString();
+            viewModel.getConfig().getWeatherCity().postValue(cityKey);
+        }
 
         int widgetBarPosition = -1;
         if(hashMap.get(KEY_PARAMS_OVERSCAN_TOP).equals("1")){
@@ -841,10 +859,12 @@ public class FullscreenActivity extends AppCompatActivity {
         if(widgetBarPosition != -1){
             viewModel.getConfig().getWeatherEnabled().postValue(true);
             viewModel.getConfig().getWidgetBarEnabled().postValue(true);
+            captionTextView.setVisibility(View.VISIBLE);
         }
         else{
             viewModel.getConfig().getWeatherEnabled().postValue(false);
             viewModel.getConfig().getWidgetBarEnabled().postValue(false);
+            captionTextView.setVisibility(View.GONE);
         }
         //TODO: Get RSS data from API and post value.
         viewModel.getConfig().getRssEnabled().postValue(false);
