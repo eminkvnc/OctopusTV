@@ -44,6 +44,7 @@ import com.tvoctopus.player.services.Reporter;
 import com.tvoctopus.player.services.RestartService;
 import com.tvoctopus.player.services.WeatherService;
 import com.tvoctopus.player.utils.ShellExecutor;
+import com.tvoctopus.player.utils.Utils;
 import com.tvoctopus.player.view.GifDialog;
 import com.tvoctopus.player.view.player.PlayerFragment;
 import com.tvoctopus.player.view.widget.WidgetFragment;
@@ -114,6 +115,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
     private TextView captionTextView;
     private TextView messageTextView;
+    private ImageView gifImageView;
     private ImageView qrImageView;
     private GifDialog gifDialog;
     private Activity activity;
@@ -186,6 +188,7 @@ public class FullscreenActivity extends AppCompatActivity {
         captionFrame = findViewById(R.id.caption_frame);
 
         qrImageView = findViewById(R.id.qr_code_imageView);
+        gifImageView = findViewById(R.id.activity_fullscreen_gif_image_view);
         messageTextView = findViewById(R.id.textView);
         messageTextView.setTextColor(Color.WHITE);
 
@@ -788,17 +791,19 @@ public class FullscreenActivity extends AppCompatActivity {
 
     private void showGif(){
         runOnUiThread(() -> {
-            if(!gifDialog.isShowing()){
-                gifDialog.show();
-            }
+//            if(!gifDialog.isShowing()){
+//                gifDialog.show();
+//            }
+            Utils.showGif(getApplicationContext(), gifImageView);
         });
     }
 
     private void dismissGif(){
         runOnUiThread(() -> {
-            if(gifDialog.isShowing()){
-                gifDialog.dismiss();
-            }
+//            if(gifDialog.isShowing()){
+//                gifDialog.dismiss();
+//            }
+            Utils.dismissGif(gifImageView);
         });
     }
 
