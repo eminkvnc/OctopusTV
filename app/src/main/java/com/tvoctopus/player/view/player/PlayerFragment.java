@@ -210,7 +210,7 @@ public class PlayerFragment extends Fragment {
             if(playlistLooperHandler != null){
                 playlistLooperHandler.removeCallbacksAndMessages(null);
             }
-            launchPlayer();
+            loopPlaylist(Long.valueOf(currentMedia.getTime()));
         }else{
             if(currentMedia != null){
                 previousMedia = currentMedia;
