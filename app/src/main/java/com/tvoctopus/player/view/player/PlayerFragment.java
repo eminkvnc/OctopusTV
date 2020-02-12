@@ -188,7 +188,7 @@ public class PlayerFragment extends Fragment {
     }
 
     public void launchPlayer(){
-        if(!playlist.isEmpty() && downloadDir.list() != null){
+        if(playlist != null && !playlist.isEmpty() && downloadDir != null && downloadDir.list() != null){
             isLaunched = true;
             loopPlaylist(0L);
         }

@@ -7,7 +7,7 @@ import android.os.IBinder;
 
 import androidx.annotation.Nullable;
 
-import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
+import com.tvoctopus.player.view.startactivity.StartActivity;
 
 public class RestartService extends Service {
     @Nullable
@@ -21,7 +21,7 @@ public class RestartService extends Service {
         super.onCreate();
         Handler handler = new Handler();
         handler.postDelayed(() -> {
-            Intent intent = new Intent(getApplicationContext(), FullscreenActivity.class);
+            Intent intent = new Intent(getApplicationContext(), StartActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             stopSelf();

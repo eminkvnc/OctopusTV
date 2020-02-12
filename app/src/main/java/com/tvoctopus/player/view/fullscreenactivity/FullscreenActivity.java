@@ -1,6 +1,5 @@
 package com.tvoctopus.player.view.fullscreenactivity;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -10,7 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -26,15 +24,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -99,7 +93,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
     public static final String TAG = "FullscreenActivity";
 
-    private static final int PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 3001;
+    public static final int PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 3001;
     private static final boolean AUTO_HIDE = true;
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
     private static final int UI_ANIMATION_DELAY = 100;
@@ -198,7 +192,7 @@ public class FullscreenActivity extends AppCompatActivity {
         mainFrame = findViewById(R.id.main_frame);
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
         SharedPreferences sp = getSharedPreferences(SHARED_PREF_OCTOPUS_DATA,MODE_PRIVATE);
-        isOverlayActivated = sp.getBoolean("OverlayActivated",false);
+        isOverlayActivated = sp.getBoolean("OverlayActivated",true);
 
         mainFrame.setOnClickListener(v -> {
             toggle();
@@ -230,15 +224,12 @@ public class FullscreenActivity extends AppCompatActivity {
         initFragments();
         initServices(viewModel.getScreenIdValue());
 
-        viewModel.getScreenId().observe(this, new Observer<String>() {
-            @Override
-            public void onChanged(String s) {
-                if(s != null){
-                    Intent intent = new Intent(ACTION_SCREEN_ID);
-                    intent.putExtra(PARAM_SCREEN_KEY, s);
-                    sendBroadcast(intent);
-                    querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, s);
-                }
+        viewModel.getScreenId().observe(this, s -> {
+            if(s != null){
+                Intent intent = new Intent(ACTION_SCREEN_ID);
+                intent.putExtra(PARAM_SCREEN_KEY, s);
+                sendBroadcast(intent);
+                querySchedulerService.putExtra(SHARED_PREF_SCREEN_ID_KEY, s);
             }
         });
 
@@ -387,7 +378,6 @@ public class FullscreenActivity extends AppCompatActivity {
         if(screenOrientation != -1){
             viewModel.getConfig().getScreenOrientation().postValue(screenOrientation);
         }
-        checkPermission(getApplicationContext(), this);
     }
 
     @Override
@@ -414,19 +404,11 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-//        Intent intent = new Intent(ACTION_WAITING);
-//        intent.putExtra(PARAM_WAITING,true);
-//        sendBroadcast(intent);
-
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-//        Intent intent = new Intent(ACTION_WAITING);
-//        intent.putExtra(PARAM_WAITING,false);
-//        sendBroadcast(intent);
-
     }
 
     private void toggle() {
@@ -467,27 +449,6 @@ public class FullscreenActivity extends AppCompatActivity {
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.add(view.getId(), fragment);
         fragmentTransaction.commit();
-    }
-
-    private void checkPermission(Context context, Activity activity) {
-
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE) {
-            // If request is cancelled, the result arrays are empty.
-            if (!(grantResults.length > 0)
-                    && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(getApplicationContext(),
-                        getResources().getString(R.string.fullscreen_activity_storage_permission_toast),
-                        Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 
     private void initFragments(){

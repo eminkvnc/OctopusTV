@@ -2,11 +2,12 @@
     <string name="app_name">OctopusTV Player</string>
     <string name="gif_dialog_content_loading">Content Loading...</string>
     <string name="downloader_notification_media_downloading">Media downloading...</string>
-    <string name="fullscreen_activity_storage_permission_toast">You Must Grant Storage Permission!</string>
+    <string name="start_activity_give_permission_message_text">You Must Grant Storage Permission!</string>
     <string name="fullscreen_activity_register_screen_id">Please register your screen.</string>
     <string name="fullscreen_activity_network_connected">Network Connected</string>
     <string name="fullscreen_activity_network_disconnected">Network Disconnected</string>
     <string name="fullscreen_activity_tap_twice">Tap Twice to Exit</string>
     <string name="fullscreen_activity_connect_network_textview">Please connect your device to the internet.</string>
+    <string name="start_activity_give_permission_button_text">Open Settings</string>
 
 </resources>

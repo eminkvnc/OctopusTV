@@ -18,7 +18,7 @@
         android:required="false" />
 
     <application
-        android:name="com.tvoctopus.player.OctopusApplication"
+        android:name=".OctopusApplication"
         android:allowBackup="false"
         android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"
@@ -28,8 +28,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity
-            android:name="com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity"
+        <activity android:name=".view.startactivity.StartActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme">
@@ -41,9 +40,16 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".view.fullscreenactivity.FullscreenActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/app_name"
+            android:theme="@style/FullscreenTheme">
+
+        </activity>
 
         <receiver
-            android:name="com.tvoctopus.player.BootStartReceiver"
+            android:name=".BootStartReceiver"
             android:enabled="true"
             android:label="BootStartReceiever"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
@@ -55,9 +61,9 @@
             </intent-filter>
         </receiver>
 
-        <service android:name="com.tvoctopus.player.services.RestartService" />
-        <service android:name="com.tvoctopus.player.services.QuerySchedulerService" />
-        <service android:name="com.tvoctopus.player.services.WeatherService" />
+        <service android:name=".services.RestartService" />
+        <service android:name=".services.QuerySchedulerService" />
+        <service android:name=".services.WeatherService" />
 
         <meta-data
             android:name="preloaded_fonts"
