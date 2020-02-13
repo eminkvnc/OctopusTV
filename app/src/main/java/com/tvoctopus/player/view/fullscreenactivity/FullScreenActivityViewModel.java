@@ -31,6 +31,10 @@ public class FullScreenActivityViewModel extends AndroidViewModel {
         return dataRepository.getPlaylist();
     }
 
+    public Playlist getLastPlaylist(){
+        return dataRepository.getLastPlaylist();
+    }
+
     public MutableLiveData<String> getScreenId(){
         return dataRepository.getScreenId();
     }

@@ -98,7 +98,11 @@ public class QuerySchedulerService extends Service {
             @Override
             public void onReceive(Context context, Intent intent) {
                 try {
-                    url = new URL(urlString+intent.getStringExtra(PARAM_SCREEN_KEY));
+                    String screenId = "";
+                    if(intent.getStringExtra(PARAM_SCREEN_KEY) != null){
+                        screenId = intent.getStringExtra(PARAM_SCREEN_KEY);
+                    }
+                    url = new URL(urlString + screenId);
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 }
@@ -121,7 +125,11 @@ public class QuerySchedulerService extends Service {
         }
         timer = new Timer();
         try {
-            url = new URL(urlString+intent.getStringExtra(SHARED_PREF_SCREEN_ID_KEY));
+            String screenId = "null";
+            if(intent.getStringExtra(SHARED_PREF_SCREEN_ID_KEY) != null){
+                screenId = intent.getStringExtra(SHARED_PREF_SCREEN_ID_KEY);
+            }
+            url = new URL(urlString+screenId);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -175,7 +183,7 @@ public class QuerySchedulerService extends Service {
                     JSONObject jo = null;
                     if (result != null) {
                         jo = new JSONObject(result);
-                    }
+
                     Log.d(TAG, "run: result: " + result);
 
                     ArrayList<CommandData> commands = new JSonParser().parseCommands(jo);
@@ -242,6 +250,7 @@ public class QuerySchedulerService extends Service {
                                     break;
                             }
                         }
+                    }
                     }
 
                 } catch (IOException | JSONException e) {

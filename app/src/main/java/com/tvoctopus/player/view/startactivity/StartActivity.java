@@ -52,22 +52,7 @@ public class StartActivity extends AppCompatActivity {
     private void checkPermission(Context context, Activity activity) {
 
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            if(ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)){
-                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-            } else{
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setMessage(R.string.start_activity_give_permission_message_text)
-                        .setCancelable(false)
-                        .setPositiveButton(R.string.start_activity_give_permission_button_text, (dialog, id) -> {
-                            Intent i = new Intent();
-                            i.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                            Uri uri = Uri.fromParts("package", StartActivity.this.getPackageName(), null);
-                            i.setData(uri);
-                            startActivityForResult(i, SETTINGS_TO_START);
-                        });
-                AlertDialog alert = builder.create();
-                alert.show();
-            }
+            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
         }
         else {
             Intent intent = new Intent(getApplicationContext(), FullscreenActivity.class);
@@ -87,7 +72,11 @@ public class StartActivity extends AppCompatActivity {
                 handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        checkPermission(getApplicationContext(), activity);
+                        if(ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+                            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
+                        } else{
+                            showAlertDialogForPermission();
+                        }
                     }
                 }, 1000 * 5);
             } else {
@@ -95,6 +84,21 @@ public class StartActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         }
+    }
+
+    private void showAlertDialogForPermission(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.start_activity_give_permission_message_text)
+                .setCancelable(false)
+                .setPositiveButton(R.string.start_activity_give_permission_button_text, (dialog, id) -> {
+                    Intent i = new Intent();
+                    i.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    Uri uri = Uri.fromParts("package", StartActivity.this.getPackageName(), null);
+                    i.setData(uri);
+                    startActivityForResult(i, SETTINGS_TO_START);
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
     }
 
     @Override

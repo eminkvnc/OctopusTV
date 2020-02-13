@@ -190,13 +190,17 @@ public class PlayerFragment extends Fragment {
     public void launchPlayer(){
         if(playlist != null && !playlist.isEmpty() && downloadDir != null && downloadDir.list() != null){
             isLaunched = true;
-            loopPlaylist(0L);
+            loopPlaylist(500L);
         }
     }
 
     public void stopPlayer(){
-        player.release();
+//        player.release();
         loopInterrupt = true;
+        if(playlistLooperHandler != null){
+            playlistLooperHandler.removeCallbacksAndMessages(null);
+        }
+        isLaunched = false;
     }
 
     private void loopPlaylist(Long delay){
@@ -205,12 +209,13 @@ public class PlayerFragment extends Fragment {
             replaceMediaFiles();
             isPlaylistUpdated = false;
             playlist.resetIndex();
-            previousMedia = playlist.get(0);
-            currentMedia = playlist.getNext();
+            currentMedia = playlist.get(playlist.size()-1);
             if(playlistLooperHandler != null){
                 playlistLooperHandler.removeCallbacksAndMessages(null);
             }
-            loopPlaylist(Long.valueOf(currentMedia.getTime()));
+
+            loopPlaylist(0L);
+
         }else{
             if(currentMedia != null){
                 previousMedia = currentMedia;

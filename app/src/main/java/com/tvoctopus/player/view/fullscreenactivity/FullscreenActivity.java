@@ -24,6 +24,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -114,7 +115,9 @@ public class FullscreenActivity extends AppCompatActivity {
 
 
     private TextView captionTextView;
+    private TextView screenIdTagTextView;
     private TextView messageTextView;
+    private TextView webLinkTextView;
     private ImageView gifImageView;
     private ImageView qrImageView;
     private GifDialog gifDialog;
@@ -189,8 +192,29 @@ public class FullscreenActivity extends AppCompatActivity {
 
         qrImageView = findViewById(R.id.qr_code_imageView);
         gifImageView = findViewById(R.id.activity_fullscreen_gif_image_view);
-        messageTextView = findViewById(R.id.textView);
+        messageTextView = findViewById(R.id.screen_id_tv);
+        screenIdTagTextView = findViewById(R.id.screen_id_tag_tv);
+        webLinkTextView = findViewById(R.id.web_link_tv);
+        String webText = getResources().getString(R.string.web_link)+System.getProperty("line.separator")+getResources().getString(R.string.web_link_description);
+        webLinkTextView.setText(webText);
         messageTextView.setTextColor(Color.WHITE);
+
+        int orientation = getResources().getConfiguration().orientation;
+        switch(orientation) {
+            case Configuration.ORIENTATION_LANDSCAPE:
+                int height = Resources.getSystem().getDisplayMetrics().heightPixels;
+                qrImageView.getLayoutParams().height = height/3;
+                qrImageView.getLayoutParams().width = height/3;
+                qrDimention = height/3;
+                break;
+
+            case Configuration.ORIENTATION_PORTRAIT:
+                int width = Resources.getSystem().getDisplayMetrics().widthPixels;
+                qrImageView.getLayoutParams().height = width*2/3;
+                qrImageView.getLayoutParams().width = width*2/3;
+                qrDimention = width*2/3;
+                break;
+        }
 
         mainFrame = findViewById(R.id.main_frame);
         mainFrame.setOnTouchListener(mDelayHideTouchListener);
@@ -224,6 +248,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(FullScreenActivityViewModel.class);
 
+        stopService(new Intent(this, RestartService.class));
         initFragments();
         initServices(viewModel.getScreenIdValue());
 
@@ -248,20 +273,36 @@ public class FullscreenActivity extends AppCompatActivity {
             }
             //Screen registered cases
             if(networkConnected && screenRegistered){
-                dismissMessages();
+                if(!viewModel.getLastPlaylist().isEmpty()){
+                    dismissMessages();
+                }
                 startServices();
             }
             if(!networkConnected && screenRegistered){
-                dismissMessages();
+                if(!viewModel.getLastPlaylist().isEmpty()){
+                    dismissMessages();
+                }
                 stopServices();
             }
         });
 
         viewModel.getScreenRegistered().observe(this, screenRegistered -> {
             if ((!screenRegistered)) {
-                showNetworkConnectionMessage();
+                generateAndShowQrCode();
+                if(!viewModel.getLastPlaylist().isEmpty()){
+                    //TODO: Clear data.
+                    dismissLogo();
+                }
             } else {
-                dismissMessages();
+                if(viewModel.getLastPlaylist().isEmpty()){
+                    //TODO: Show preparing screen.
+                    showLogo();
+                }
+                else{
+                    playerFrame.setVisibility(View.VISIBLE);
+                    widgetFrame.setVisibility(View.VISIBLE);
+                    dismissLogo();
+                }
             }
         });
 
@@ -349,6 +390,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 if(allDownloadsComplete){
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_SUCCEEDED);
                     dismissGif();
+                    dismissLogo();
                 } else {
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandId, Reporter.COMMAND_STATUS_INPROGRESS);
                 }
@@ -709,22 +751,16 @@ public class FullscreenActivity extends AppCompatActivity {
                 }
     }
 
-    public void generateAndShowQrCode(){
-        String id;
-        if(viewModel.getScreenIdValue() == null){
-            id = generateRandomID();
-            viewModel.getScreenId().postValue(id);
-        } else {
-            id = viewModel.getScreenIdValue();
-        }
-        // Init services with generated screenId.
-        int orientation = getResources().getConfiguration().orientation;
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        int orientation = newConfig.orientation;
         switch(orientation) {
             case Configuration.ORIENTATION_LANDSCAPE:
                 int height = Resources.getSystem().getDisplayMetrics().heightPixels;
-                qrImageView.getLayoutParams().height = height*2/3;
-                qrImageView.getLayoutParams().width = height*2/3;
-                qrDimention = height*2/3;
+                qrImageView.getLayoutParams().height = height/3;
+                qrImageView.getLayoutParams().width = height/3;
+                qrDimention = height/3;
                 break;
 
             case Configuration.ORIENTATION_PORTRAIT:
@@ -734,6 +770,18 @@ public class FullscreenActivity extends AppCompatActivity {
                 qrDimention = width*2/3;
                 break;
         }
+    }
+
+    public void generateAndShowQrCode(){
+        String id;
+        if(viewModel.getScreenIdValue() == null){
+            id = generateRandomID();
+            viewModel.getScreenId().postValue(id);
+        } else {
+            id = viewModel.getScreenIdValue();
+        }
+        // Init services with generated screenId.
+
         try {
             QRGEncoder qrgEncoder = new QRGEncoder(id, null, QRGContents.Type.TEXT, qrDimention);
             qrBitmap = qrgEncoder.encodeAsBitmap();
@@ -743,27 +791,34 @@ public class FullscreenActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         runOnUiThread(() -> {
-            String firstMessage = getResources().getString(R.string.fullscreen_activity_register_screen_id)+System.getProperty("line.separator")+" ID: " + id;
             widgetFrame.setVisibility(View.GONE);
-            messageTextView.setText(firstMessage);
-            qrImageView.setImageBitmap(qrBitmap);
+//            playerFrame.setVisibility(View.GONE);
+            messageTextView.setText(id);
+            qrImageView.setImageResource(R.drawable.ic_octopus_logo_new);
             messageTextView.setVisibility(View.VISIBLE);
             qrImageView.setVisibility(View.VISIBLE);
+            screenIdTagTextView.setVisibility(View.VISIBLE);
+            webLinkTextView.setVisibility(View.VISIBLE);
         });
     }
 
     public void showNetworkConnectionMessage(){
         runOnUiThread(() -> {
             messageTextView.setText(getResources().getString(R.string.fullscreen_activity_connect_network_textview));
-            qrImageView.setImageResource(R.drawable.ic_octopus_logo);
+            qrImageView.setImageResource(R.drawable.ic_octopus_logo_new);
             messageTextView.setVisibility(View.VISIBLE);
             qrImageView.setVisibility(View.VISIBLE);
+            screenIdTagTextView.setVisibility(View.GONE);
+            webLinkTextView.setVisibility(View.GONE);
         });
     }
 
     public void dismissMessages(){
         messageTextView.setVisibility(View.GONE);
         qrImageView.setVisibility(View.GONE);
+        screenIdTagTextView.setVisibility(View.GONE);
+        webLinkTextView.setVisibility(View.GONE);
+
     }
 
     private boolean checkServices(){
@@ -805,6 +860,24 @@ public class FullscreenActivity extends AppCompatActivity {
 //            }
             Utils.dismissGif(gifImageView);
         });
+    }
+
+    private void dismissLogo(){
+        qrImageView.setVisibility(View.GONE);
+        messageTextView.setVisibility(View.GONE);
+        screenIdTagTextView.setVisibility(View.GONE);
+        webLinkTextView.setVisibility(View.GONE);
+        playerFrame.setVisibility(View.VISIBLE);
+        widgetFrame.setVisibility(View.VISIBLE);
+    }
+
+    private void showLogo(){
+        messageTextView.setText("İçerik bekleniyor...");
+        messageTextView.setVisibility(View.VISIBLE);
+        screenIdTagTextView.setVisibility(View.GONE);
+        webLinkTextView.setVisibility(View.GONE);
+        qrImageView.setImageResource(R.drawable.ic_octopus_logo_new);
+        qrImageView.setVisibility(View.VISIBLE);
     }
 
     private void applyConfigurations(CommandData commandData){
@@ -868,7 +941,6 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         if (doubleBackTab) {
-            super.onBackPressed();
             finishAffinity();
             //android.os.Process.killProcess(android.os.Process.myPid());
         } else {

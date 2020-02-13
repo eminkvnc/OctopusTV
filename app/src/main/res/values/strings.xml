@@ -9,5 +9,8 @@
     <string name="fullscreen_activity_tap_twice">Tap Twice to Exit</string>
     <string name="fullscreen_activity_connect_network_textview">Please connect your device to the internet.</string>
     <string name="start_activity_give_permission_button_text">Open Settings</string>
+    <string name="screen_tag">Screen Tag</string>
+    <string name="web_link">http://www.tvoctopus.net/</string>
+    <string name="web_link_description">web sitesinde ekran etiketi kodunu kullanarak etkinleştirin</string>
 
 </resources>

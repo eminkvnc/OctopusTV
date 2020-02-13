@@ -81,9 +81,9 @@ public class WeatherService extends Service {
             }
             try {
                 timer = new Timer();
-                String city = intent.getStringExtra(WEATHER_CITY_KEY);
-                if(city == null){
-                    city = "istanbul";
+                String city = "istanbul";
+                if(intent.getStringExtra(WEATHER_CITY_KEY) != null){
+                    city = intent.getStringExtra(WEATHER_CITY_KEY);
                 }
                 url = new URL(urlP1+city+urlP2);
                 weatherTask = new WeatherTask();

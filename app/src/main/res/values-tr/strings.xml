@@ -10,4 +10,7 @@
     <string name="fullscreen_activity_tap_twice">Çıkmak İçin İki Kez Dokunun</string>
     <string name="fullscreen_activity_connect_network_textview">Lütfen cihazınızı internete bağlayınız.</string>
     <string name="start_activity_give_permission_button_text">Ayarları Aç</string>
+    <string name="screen_tag">Ekran Etiketi</string>
+    <string name="web_link">http://www.tvoctopus.net/</string>
+    <string name="web_link_description">" web sitesinde ekran etiketi kodunu kullanarak etkinleştirin"</string>
 </resources>

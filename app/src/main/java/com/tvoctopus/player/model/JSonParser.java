@@ -55,7 +55,7 @@ public class JSonParser {
         JSONObject params;
         CommandData c;
         try {
-            if (!input.getBoolean(KEY_ERROR)) {
+            if (input != null && !input.getBoolean(KEY_ERROR)) {
                 if (!input.get(KEY_COMMANDS).toString().equals("null")) {
                     JSONArray jsonArray = input.getJSONArray(KEY_COMMANDS);
                     if (jsonArray.length() > 0) {
