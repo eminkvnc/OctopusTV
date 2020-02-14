@@ -18,7 +18,7 @@
         android:required="false" />
 
     <application
-        android:name=".OctopusApplication"
+        android:name="com.tvoctopus.player.OctopusApplication"
         android:allowBackup="false"
         android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"
@@ -28,7 +28,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".view.startactivity.StartActivity"
+        <activity android:name="com.tvoctopus.player.view.startactivity.StartActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme">
@@ -41,15 +41,19 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".view.fullscreenactivity.FullscreenActivity"
+            android:name="com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
+            android:windowSoftInputMode="stateAlwaysHidden"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme">
-
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <receiver
-            android:name=".BootStartReceiver"
+            android:name="com.tvoctopus.player.BootStartReceiver"
             android:enabled="true"
             android:label="BootStartReceiever"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
@@ -61,9 +65,10 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".services.RestartService" />
-        <service android:name=".services.QuerySchedulerService" />
-        <service android:name=".services.WeatherService" />
+        <service android:name="com.tvoctopus.player.services.RestartService"
+            android:enabled="true"/>
+        <service android:name="com.tvoctopus.player.services.QuerySchedulerService" />
+        <service android:name="com.tvoctopus.player.services.WeatherService" />
 
         <meta-data
             android:name="preloaded_fonts"

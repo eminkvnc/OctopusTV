@@ -34,6 +34,7 @@ import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
 import java.io.File;
 
+import static com.tvoctopus.player.services.Downloader.DOWNLOAD_FILE_PREFIX;
 import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
 import static com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity.ACTION_SCREEN_WAKEUP;
 import static com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity.PARAM_SCREEN_WAKEUP;
@@ -84,6 +85,7 @@ public class PlayerFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopPlayer();
         context.unregisterReceiver(waitReceiver);
         LocalBroadcastManager.getInstance(context).unregisterReceiver(updateReceiver);
         LocalBroadcastManager.getInstance(context).unregisterReceiver(startStopReceiver);
@@ -172,18 +174,18 @@ public class PlayerFragment extends Fragment {
         playerView = v.findViewById(R.id.player_view);
         imageView = v.findViewById(R.id.player_image_view);
 
+        player = ExoPlayerFactory.newSimpleInstance(getContext());
+        dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "octopus"));
+        player.setRepeatMode(Player.REPEAT_MODE_ALL);
+        downloadDir = context.getExternalFilesDir(Downloader.DOWNLOAD_DIR);
+
         imageView.setImageResource(android.R.color.black);
         imageView.setVisibility(View.GONE);
 
         playerView.setUseController(false);
         playerView.setVisibility(View.GONE);
 
-        player = ExoPlayerFactory.newSimpleInstance(getContext());
-        dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "octopus"));
-        player.setRepeatMode(Player.REPEAT_MODE_ALL);
         playerView.setPlayer(player);
-        downloadDir = context.getExternalFilesDir(Downloader.DOWNLOAD_DIR);
-
         return v;
     }
 
@@ -229,7 +231,7 @@ public class PlayerFragment extends Fragment {
             if(previousMedia != null){
                 previousMedia.setStopTime(System.currentTimeMillis());
                 if(previousMedia.getStartTime() != -1 && previousMedia.getStopTime() != -1){
-                    playerFragmentViewModel.reportMediaData(previousMedia, isNetworkConnected);
+//                    playerFragmentViewModel.reportMediaData(previousMedia, isNetworkConnected);
                 }
             }
             if(currentMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
@@ -270,14 +272,21 @@ public class PlayerFragment extends Fragment {
         if (mediaFiles != null) {
             for (String mediaFile : mediaFiles) {
                 File file = new File(downloadDir, mediaFile);
-                String nameWithoutPrefix = mediaFile.substring(Downloader.DOWNLOAD_FILE_PREFIX.length());
-                if (playlist.getMediaNames().contains(nameWithoutPrefix)) {
-                    file.renameTo(new File(downloadDir, nameWithoutPrefix));
-                }
-                else {
+                if(file.exists() && !mediaFile.startsWith(DOWNLOAD_FILE_PREFIX)){
                     file.delete();
                 }
             }
+            mediaFiles = downloadDir.list();
+            if(mediaFiles != null){
+                for (String mediaFile : mediaFiles) {
+                    File file = new File(downloadDir, mediaFile);
+                    String nameWithoutPrefix = mediaFile.substring(Downloader.DOWNLOAD_FILE_PREFIX.length());
+                    if (playlist.getMediaNames().contains(nameWithoutPrefix)) {
+                        file.renameTo(new File(downloadDir, nameWithoutPrefix));
+                    }
+                }
+            }
+
         }
     }
 

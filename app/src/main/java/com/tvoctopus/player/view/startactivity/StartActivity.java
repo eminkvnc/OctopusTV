@@ -56,6 +56,7 @@ public class StartActivity extends AppCompatActivity {
         }
         else {
             Intent intent = new Intent(getApplicationContext(), FullscreenActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
         }
     }
@@ -81,6 +82,7 @@ public class StartActivity extends AppCompatActivity {
                 }, 1000 * 5);
             } else {
                 Intent intent = new Intent(getApplicationContext(), FullscreenActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
             }
         }

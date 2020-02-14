@@ -74,26 +74,24 @@ public class WeatherService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        new Thread(() -> {
+        if(timer != null){
+            timer.cancel();
+            timer = null;
+        }
+        try {
+            timer = new Timer();
+            String city = "istanbul";
+            if(intent.getStringExtra(WEATHER_CITY_KEY) != null){
+                city = intent.getStringExtra(WEATHER_CITY_KEY);
+            }
+            url = new URL(urlP1+city+urlP2);
+            weatherTask = new WeatherTask();
             if(timer != null){
-                timer.cancel();
-                timer = null;
+                timer.schedule(weatherTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
             }
-            try {
-                timer = new Timer();
-                String city = "istanbul";
-                if(intent.getStringExtra(WEATHER_CITY_KEY) != null){
-                    city = intent.getStringExtra(WEATHER_CITY_KEY);
-                }
-                url = new URL(urlP1+city+urlP2);
-                weatherTask = new WeatherTask();
-                if(timer != null){
-                    timer.schedule(weatherTask, SCHEDULE_DELAY, SCHEDULE_PERIOD);
-                }
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -123,31 +121,33 @@ public class WeatherService extends Service {
         public void run() {
             //Query here!
             if(!isWaiting){
-                try {
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    InputStream inputStream;
-                    StringBuilder stringBuilder = new StringBuilder();
-                    if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
-                        inputStream = connection.getInputStream();
-                        InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                new Thread(() -> {
+                    try {
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        InputStream inputStream;
+                        StringBuilder stringBuilder = new StringBuilder();
+                        if (connection.getResponseCode() == HttpsURLConnection.HTTP_OK){
+                            inputStream = connection.getInputStream();
+                            InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
-                        String data = bufferedReader.readLine();
-                        while (data != null){
-                            stringBuilder.append(data);
-                            data = bufferedReader.readLine();
+                            String data = bufferedReader.readLine();
+                            while (data != null){
+                                stringBuilder.append(data);
+                                data = bufferedReader.readLine();
+                            }
+                            connection.disconnect();
+                            result = stringBuilder.toString();
                         }
-                        connection.disconnect();
-                        result = stringBuilder.toString();
+                        Intent intent = new Intent();
+                        intent.setAction(ACTION_WEATHER_QUERY);
+                        intent.putExtra(PARAM_WEATHER_RESULT, result);
+                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    Intent intent = new Intent();
-                    intent.setAction(ACTION_WEATHER_QUERY);
-                    intent.putExtra(PARAM_WEATHER_RESULT, result);
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                Log.d(TAG, "run:Weather query works...");
+                    Log.d(TAG, "run:Weather query works...");
+                }).start();
             }
         }
     }

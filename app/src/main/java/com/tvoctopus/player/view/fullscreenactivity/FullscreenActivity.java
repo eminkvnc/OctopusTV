@@ -143,6 +143,7 @@ public class FullscreenActivity extends AppCompatActivity {
     AlarmManager alarmManager;
     HashMap<Integer, PendingIntent[]> pendingIntentMap;
     private boolean isOverlayActivated = true;
+    private boolean isNetworkConnected =false;
     private int mainFrameClickCount = 0;
 
     private FullScreenActivityViewModel viewModel;
@@ -261,7 +262,9 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
+
         viewModel.getNetworkConnected().observe(this, networkConnected -> {
+            isNetworkConnected = networkConnected;
             boolean screenRegistered = viewModel.getScreenRegisteredValue();
             if(networkConnected && !screenRegistered){
                 startServices();
@@ -288,7 +291,14 @@ public class FullscreenActivity extends AppCompatActivity {
 
         viewModel.getScreenRegistered().observe(this, screenRegistered -> {
             if ((!screenRegistered)) {
-                generateAndShowQrCode();
+                if(isNetworkConnected){
+                    startServices();
+                    //Dont generate
+                    generateAndShowQrCode();
+                } else {
+                    showNetworkConnectionMessage();
+                }
+
                 if(!viewModel.getLastPlaylist().isEmpty()){
                     //TODO: Clear data.
                     dismissLogo();
@@ -428,7 +438,6 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        playerFragment.stopPlayer();
         stopService(querySchedulerService);
         stopService(weatherService);
 //        unregisterReceiver(startStopReceiver);
@@ -440,10 +449,7 @@ public class FullscreenActivity extends AppCompatActivity {
         lbm.unregisterReceiver(resetCommandReceiver);
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        Intent intent = new Intent(getApplicationContext(), RestartService.class);
-        if(isOverlayActivated) {
-            startService(intent);
-        }
+
     }
 
     @Override
@@ -791,7 +797,7 @@ public class FullscreenActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         runOnUiThread(() -> {
-            widgetFrame.setVisibility(View.GONE);
+            //widgetFrame.setVisibility(View.GONE);
 //            playerFrame.setVisibility(View.GONE);
             messageTextView.setText(id);
             qrImageView.setImageResource(R.drawable.ic_octopus_logo_new);
@@ -941,8 +947,18 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         if (doubleBackTab) {
+            stopService(querySchedulerService);
+            stopService(weatherService);
+            Downloader.getInstance(getApplicationContext()).stop();
+            Intent intent = new Intent(getApplicationContext(), RestartService.class);
+            if(isOverlayActivated) {
+                PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
+                AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+                alarm.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+            }
             finishAffinity();
-            //android.os.Process.killProcess(android.os.Process.myPid());
+            System.exit(0);
+//            android.os.Process.killProcess(android.os.Process.myPid());
         } else {
             Toast.makeText(this, getResources().getString(R.string.fullscreen_activity_tap_twice), Toast.LENGTH_SHORT).show();
             doubleBackTab = true;
