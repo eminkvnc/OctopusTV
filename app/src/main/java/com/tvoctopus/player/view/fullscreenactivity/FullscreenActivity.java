@@ -38,21 +38,16 @@ import com.google.zxing.WriterException;
 import com.tvoctopus.player.R;
 import com.tvoctopus.player.model.CommandData;
 import com.tvoctopus.player.model.DayStatus;
-import com.tvoctopus.player.model.JSonParser;
 import com.tvoctopus.player.services.Downloader;
 import com.tvoctopus.player.services.QuerySchedulerService;
 import com.tvoctopus.player.services.Reporter;
 import com.tvoctopus.player.services.RestartService;
 import com.tvoctopus.player.services.WeatherService;
-import com.tvoctopus.player.utils.ShellExecutor;
 import com.tvoctopus.player.utils.Utils;
 import com.tvoctopus.player.view.GifDialog;
 import com.tvoctopus.player.view.player.PlayerFragment;
 import com.tvoctopus.player.view.widget.WidgetFragment;
 
-import org.json.JSONObject;
-
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -62,9 +57,6 @@ import java.util.UUID;
 import androidmads.library.qrgenearator.QRGContents;
 import androidmads.library.qrgenearator.QRGEncoder;
 
-import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_SCREENSHOT;
-import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_TURN_OFF_TV;
-import static com.tvoctopus.player.model.APIKeys.KEY_COMMANDS_TURN_ON_TV;
 import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_ORIENTATION;
 import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_BOTTOM;
 import static com.tvoctopus.player.model.APIKeys.KEY_PARAMS_OVERSCAN_LEFT;
@@ -76,11 +68,8 @@ import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_0;
 import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_180;
 import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_270;
 import static com.tvoctopus.player.model.APIKeys.KEY_VALUES_ROTATION_90;
-import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_CONFIG;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_OCTOPUS_DATA;
-import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_PLAYLIST;
 import static com.tvoctopus.player.model.DataRepository.SHARED_PREF_SCREEN_ID_KEY;
-import static com.tvoctopus.player.services.Downloader.DOWNLOAD_DIR;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_REPORT;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_RESET;
 import static com.tvoctopus.player.services.QuerySchedulerService.ACTION_COMMAND_SYNC;
@@ -386,8 +375,8 @@ public class FullscreenActivity extends AppCompatActivity {
                 if (commandData != null){
                     Reporter.getInstance(getApplicationContext()).reportCommandStatus(commandData.getId(),"succeeded");
                     playerFragment.stopPlayer();
-                    clearApplicationData();
-                    finishAffinity();
+                    Utils.clearApplicationData(getApplicationContext());
+                    exitApp();
                 }
             }
         };
@@ -524,9 +513,7 @@ public class FullscreenActivity extends AppCompatActivity {
     }
 
     private void initRecievers(){
-
-
-
+        //TODO: Init receivers here.
     }
 
     private void updateAlarms(HashMap<Integer, DayStatus> hashMap){
@@ -631,39 +618,6 @@ public class FullscreenActivity extends AppCompatActivity {
         return UUID.randomUUID().toString().substring(0,7);
     }
 
-    private void deleteDirectory(File path) {
-        if(path.exists()) {
-            File[] files = path.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDirectory(file);
-                    } else {
-                        boolean wasSuccessful = file.delete();
-                        if (wasSuccessful) {
-                            Log.i("Deleted ", "successfully");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void clearApplicationData(){
-        getSharedPreferences(SHARED_PREF_OCTOPUS_DATA, Context.MODE_PRIVATE).edit().clear().apply();
-        getSharedPreferences(SHARED_PREF_CONFIG, Context.MODE_PRIVATE).edit().clear().apply();
-        getSharedPreferences(SHARED_PREF_PLAYLIST, Context.MODE_PRIVATE).edit().clear().apply();
-        getSharedPreferences("ReportQueue", Context.MODE_PRIVATE).edit().clear().apply();
-        File file = getExternalFilesDir(DOWNLOAD_DIR);
-        if (file != null) {
-            deleteDirectory(file);
-        }
-//        File file2 = getExternalFilesDir(DOWNLOAD_DIR_TEMP);
-//        if (file2 != null) {
-//            deleteDirectory(file2);
-//        }
-    }
-
     public void setWidgetBarPosition(int position){
 
         switch (position){
@@ -706,55 +660,6 @@ public class FullscreenActivity extends AppCompatActivity {
                 widgetFrame.requestLayout();
                 break;
         }
-    }
-
-    public void onNewQuery(JSONObject result) {
-
-        Log.d("QuerySchedulerService", "onNewQuery: "+result);
-        commands = new JSonParser().parseCommands(result);
-                for(CommandData command : commands){
-                    switch (command.getCommand()){
-
-                        case KEY_COMMANDS_TURN_ON_TV:
-
-                            File file1 = new File("/sys/class/cec/cmd");
-                            if(file1.exists()){
-                                //String turnOnShellCommand = "echo 0x40 0x04 > /sys/class/cec/cmd";
-                                //ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand).asSuperUser();
-                                //shellExecutorOn.start();
-                                String turnOnShellCommand = "input keyevent 26";
-                                ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand);
-                                shellExecutorOn.start();
-                            } else{
-//                                if(!playerFragment.isLaunched()){
-//                                    playerFragment.launchPlayer();
-//                                }
-                            }
-                            break;
-
-                        case KEY_COMMANDS_TURN_OFF_TV:
-
-                            File file2 = new File("/sys/class/cec/cmd");
-                            if(file2.exists()) {
-                                //String turnOffShellCommand = "echo 0x40 0x36 0x00 0x00 > /sys/class/cec/cmd";
-                                //ShellExecutor shellExecutorOn = new ShellExecutor(turnOnShellCommand).asSuperUser();
-                                //shellExecutorOn.start();
-                                String turnOffShellCommand = "input keyevent 26";
-                                ShellExecutor shellExecutorOff = new ShellExecutor(turnOffShellCommand);
-                                shellExecutorOff.start();
-                            } else{
-                                if(playerFragment.isLaunched()){
-                                    // if cec cmd not found we can stop playing media from player fragment
-                                }
-                            }
-                            break;
-
-                        case KEY_COMMANDS_SCREENSHOT:
-                            //TODO: Implement sending screenshot.
-
-                            break;
-                    }
-                }
     }
 
     @Override
@@ -947,24 +852,27 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         if (doubleBackTab) {
-            stopService(querySchedulerService);
-            stopService(weatherService);
-            Downloader.getInstance(getApplicationContext()).stop();
-            Intent intent = new Intent(getApplicationContext(), RestartService.class);
-            if(isOverlayActivated) {
-                PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
-                AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-                alarm.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
-            }
-            finishAffinity();
-            System.exit(0);
-//            android.os.Process.killProcess(android.os.Process.myPid());
+            exitApp();
         } else {
             Toast.makeText(this, getResources().getString(R.string.fullscreen_activity_tap_twice), Toast.LENGTH_SHORT).show();
             doubleBackTab = true;
             Handler handler = new Handler();
             handler.postDelayed(() -> doubleBackTab = false, 500);
         }
+    }
+
+    private void exitApp(){
+        stopService(querySchedulerService);
+        stopService(weatherService);
+        Downloader.getInstance(getApplicationContext()).stop();
+        Intent intent = new Intent(getApplicationContext(), RestartService.class);
+        if(isOverlayActivated) {
+            PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
+            AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+            alarm.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+        }
+        finishAffinity();
+        System.exit(0);
     }
 }
 

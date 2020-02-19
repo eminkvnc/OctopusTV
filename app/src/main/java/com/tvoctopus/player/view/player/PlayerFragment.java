@@ -18,7 +18,6 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.ui.PlayerView;
@@ -30,11 +29,11 @@ import com.tvoctopus.player.R;
 import com.tvoctopus.player.model.MediaData;
 import com.tvoctopus.player.model.Playlist;
 import com.tvoctopus.player.services.Downloader;
+import com.tvoctopus.player.utils.Utils;
 import com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity;
 
 import java.io.File;
 
-import static com.tvoctopus.player.services.Downloader.DOWNLOAD_FILE_PREFIX;
 import static com.tvoctopus.player.services.Downloader.PARAM_DOWNLOAD_COMPLETE_PLAYLIST;
 import static com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity.ACTION_SCREEN_WAKEUP;
 import static com.tvoctopus.player.view.fullscreenactivity.FullscreenActivity.PARAM_SCREEN_WAKEUP;
@@ -174,7 +173,7 @@ public class PlayerFragment extends Fragment {
         playerView = v.findViewById(R.id.player_view);
         imageView = v.findViewById(R.id.player_image_view);
 
-        player = ExoPlayerFactory.newSimpleInstance(getContext());
+        player = new SimpleExoPlayer.Builder(context).build();
         dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "octopus"));
         player.setRepeatMode(Player.REPEAT_MODE_ALL);
         downloadDir = context.getExternalFilesDir(Downloader.DOWNLOAD_DIR);
@@ -208,7 +207,7 @@ public class PlayerFragment extends Fragment {
     private void loopPlaylist(Long delay){
 
         if(isPlaylistUpdated){
-            replaceMediaFiles();
+            Utils.replaceMediaFiles(downloadDir, playlist);
             isPlaylistUpdated = false;
             playlist.resetIndex();
             currentMedia = playlist.get(playlist.size()-1);
@@ -266,42 +265,6 @@ public class PlayerFragment extends Fragment {
         }
     }
 
-    // Remove media from storage if deleted on API
-    private void replaceMediaFiles(){
-        String[] mediaFiles = downloadDir.list();
-        if (mediaFiles != null) {
-            for (String mediaFile : mediaFiles) {
-                File file = new File(downloadDir, mediaFile);
-                if(file.exists() && !mediaFile.startsWith(DOWNLOAD_FILE_PREFIX)){
-                    file.delete();
-                }
-            }
-            mediaFiles = downloadDir.list();
-            if(mediaFiles != null){
-                for (String mediaFile : mediaFiles) {
-                    File file = new File(downloadDir, mediaFile);
-                    String nameWithoutPrefix = mediaFile.substring(Downloader.DOWNLOAD_FILE_PREFIX.length());
-                    if (playlist.getMediaNames().contains(nameWithoutPrefix)) {
-                        file.renameTo(new File(downloadDir, nameWithoutPrefix));
-                    }
-                }
-            }
-
-        }
-    }
-
-    private void removeTempFiles(){
-        String[] mediaFiles = downloadDir.list();
-        if (mediaFiles != null) {
-            for (String mediaFile : mediaFiles) {
-                if (mediaFile.startsWith(Downloader.DOWNLOAD_FILE_PREFIX)) {
-                    File file = new File(downloadDir, mediaFile);
-                    file.delete();
-                }
-            }
-        }
-    }
-
     public boolean isLaunched() {
         return isLaunched;
     }
@@ -327,7 +290,7 @@ public class PlayerFragment extends Fragment {
                 if(previousMedia.getType().equals(MediaData.MEDIA_TYPE_VIDEO)){
                     player.setPlayWhenReady(false);
                 }
-                playlistLooperHandler.removeCallbacks(playlistLooperRunnable);
+                playlistLooperHandler.removeCallbacksAndMessages(null);
                 playlistStopTime = System.currentTimeMillis();
                 playlistRemainingTime = Long.valueOf(previousMedia.getTime()) - (playlistStopTime - playlistStartTime);
             }else{
@@ -342,5 +305,4 @@ public class PlayerFragment extends Fragment {
             }
         }
     }
-
 }

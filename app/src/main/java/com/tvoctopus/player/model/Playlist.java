@@ -29,6 +29,10 @@ public class Playlist extends ArrayList<MediaData> implements Parcelable {
 
     }
 
+    public Uri getMediaUri(File downloadDir){
+        return Uri.parse("file://"+downloadDir.getAbsolutePath()+"/"+get(index).getName());
+    }
+
     public MediaData getNext(){
         index++;
         if(index < size()){
